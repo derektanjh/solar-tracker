@@ -117,14 +117,14 @@ tbody tr{cursor:pointer}
       <label>Park (%)<input id="pp" type="number" inputmode="decimal" step="0.1" placeholder="optional"></label>
       <label>Park distance (km)<input id="pk" type="number" inputmode="decimal" step="0.1" placeholder="optional"></label>
     </div></div>
+    <div class="grp r"><h3>Tesla's trip report</h3><div class="fields">
+      <label class="span2">Power used (kWh) *<input id="u" type="number" inputmode="decimal" step="0.01"></label>
+    </div></div>
     <div class="grp b"><h3>Charging</h3><div class="fields">
       <label>Power charged (kWh) *<input id="ch" type="number" inputmode="decimal" step="0.01"></label>
       <label>Charged up to (%) *<input id="ct" type="number" inputmode="decimal" value="80"></label>
     </div>
     <p class="hint">Stopped at a different % than usual? Change "Charged up to". The adjusted efficiency still works.</p></div>
-    <div class="grp r"><h3>Tesla's trip report</h3><div class="fields">
-      <label class="span2">Power used (kWh) *<input id="u" type="number" inputmode="decimal" step="0.01"></label>
-    </div></div>
   </div>
   <div class="actions">
     <button class="btn" id="save">Save trip</button>
