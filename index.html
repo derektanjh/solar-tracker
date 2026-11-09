@@ -2,71 +2,156 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Home Solar &amp; TNB Usage Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Solar Tracker</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Solar Tracker">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fcfcfb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1a19" media="(prefers-color-scheme: dark)">
 <style>
 :root{
   color-scheme:light;
-  --surface:#fcfcfb; --card:#ffffff; --line:#e6e5e1; --grid:#eeede9;
+  --surface:#fcfcfb; --card:#ffffff; --line:#e6e5e1; --grid:#eeede9; --soft:#f3f2ef;
   --text:#0b0b0b; --text2:#52514e; --muted:#8a8984;
-  --grid-c:#2a78d6;   /* series 1: from TNB grid */
-  --solar-c:#eb6834;  /* series 2: solar used directly */
-  --export-c:#86b6ef; /* exported (lighter blue step) */
-  --warn:#b45309; --good:#15803d; --base-c:#a3a29c;
+  --grid-c:#2a78d6; --solar-c:#eb6834; --base-c:#a3a29c;
+  --accent:#2a78d6; --warn:#b45309; --good:#15803d; --bad:#c2410c;
 }
 @media (prefers-color-scheme:dark){
-  :root{color-scheme:dark;--surface:#1a1a19;--card:#232322;--line:#3a3a38;--grid:#2e2e2c;
-  --text:#f0efec;--text2:#c3c2b7;--muted:#8f8e86;--grid-c:#3987e5;--solar-c:#d95926;--export-c:#5598e7;--warn:#f59e0b;--good:#4ade80;--base-c:#6f6e69}
+  :root{color-scheme:dark;--surface:#1a1a19;--card:#232322;--line:#3a3a38;--grid:#2e2e2c;--soft:#2b2b29;
+  --text:#f0efec;--text2:#c3c2b7;--muted:#8f8e86;--grid-c:#3987e5;--solar-c:#d95926;--base-c:#6f6e69;
+  --accent:#3987e5;--warn:#f59e0b;--good:#4ade80;--bad:#fb923c}
 }
-*{box-sizing:border-box}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--surface);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-main{max-width:1040px;margin:0 auto;padding:28px 18px 60px}
-h1{font-size:24px;margin:0 0 4px}
+main{max-width:1040px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(110px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+header{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+header img{width:42px;height:42px;border-radius:10px;flex:none}
+header h1{flex:1}
+#hdrAdd{flex:none}
+h1{font-size:22px;line-height:1.2;margin:0}
 h2{font-size:17px;margin:0 0 4px}
-.sub{color:var(--text2);margin:0 0 22px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:18px}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
-.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
-.tile .k{font-size:13px;color:var(--text2)}
-.tile .v{font-size:26px;font-weight:650;margin-top:2px}
-.tile .d{font-size:12.5px;color:var(--muted)}
-.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--text2);margin:6px 0 4px}
+.sub{color:var(--text2);margin:6px 0 18px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.tile .k{font-size:12.5px;color:var(--text2)}
+.tile .v{font-size:24px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums}
+.tile .d{font-size:12px;color:var(--muted)}
+.tile.hero{border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
+.tile.hero .v{color:var(--good)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--text2);margin:6px 0 4px}
 .legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;background:var(--c);vertical-align:-1px}
-.chartwrap{position:relative}
-svg{display:block;width:100%;height:auto;overflow:visible}
+.note{font-size:13px;color:var(--text2)}
+.chartwrap{position:relative;touch-action:pan-y}
+svg{display:block;overflow:visible}
 svg text{fill:var(--text2);font-size:12px}
-.tip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.12);display:none;white-space:nowrap;z-index:5}
+.tip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px;box-shadow:0 6px 18px rgba(0,0,0,.14);display:none;white-space:nowrap;z-index:5}
 .tip b{display:block;margin-bottom:2px}
 .tip i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
-table{width:100%;border-collapse:collapse;font-size:13.5px}
-th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+/* table (desktop) + month cards (phone) */
+table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{padding:8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
 th{color:var(--text2);font-weight:600;font-size:12.5px}
+tbody tr{cursor:pointer} tbody tr:hover{background:var(--soft)}
 td.hl{font-weight:650}
 .scroll{overflow-x:auto}
 .flag{font-size:12px;padding:1px 7px;border-radius:99px;border:1px solid currentColor}
 .flag.ok{color:var(--good)} .flag.over{color:var(--warn)}
-details summary{cursor:pointer;font-weight:600}
-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
-label{font-size:12.5px;color:var(--text2);display:flex;flex-direction:column;gap:3px}
-input{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text)}
-button,.btn{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--grid-c);color:#fff;cursor:pointer;text-decoration:none;display:inline-block}
-pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;overflow-x:auto;font-size:12.5px}
-.note{font-size:13px;color:var(--text2)}
+.mcards{display:none}
+.mcard{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;cursor:pointer}
+.mcard .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.mcard .top b{font-size:16px}
+.mcard .save{color:var(--good);font-weight:650}
+.mcard .grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px;font-size:13px;color:var(--text2)}
+.mcard .grid span b{color:var(--text);font-weight:600}
 .formula{font-size:13.5px;color:var(--text2);line-height:1.8}
 .formula b{color:var(--text)}
+/* buttons */
+.btn{font:inherit;font-weight:600;padding:11px 16px;border-radius:12px;border:1px solid transparent;background:var(--accent);color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px}
+.btn.secondary{background:var(--soft);color:var(--text);border-color:var(--line)}
+.btn.link{background:none;color:var(--accent);padding:6px 4px;min-height:auto}
+.btn:disabled{opacity:.5;cursor:default}
+.fab{display:none;position:fixed;right:calc(18px + env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));z-index:20;box-shadow:0 8px 24px rgba(0,0,0,.22);border-radius:999px;padding:14px 22px;font-size:16px}
+.fab svg{width:18px;height:18px}
+/* sheet */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30;display:none;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.sheet{background:var(--card);width:min(560px,100%);max-height:min(92vh,900px);overflow:auto;border-radius:18px;padding:20px;position:relative;-webkit-overflow-scrolling:touch}
+.sheet h3{margin:0 0 2px;font-size:19px}
+.sheet .x{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;border:none;background:var(--soft);color:var(--text);font-size:20px;cursor:pointer}
+.step{margin-top:16px}
+.step .lbl{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:22px 14px;text-align:center;cursor:pointer;display:block;transition:border-color .15s,background .15s}
+.drop:hover,.drop.drag{border-color:var(--accent);background:var(--soft)}
+.drop .big{font-weight:650;font-size:16px;color:var(--text)}
+.drop input{display:none}
+.parsed{background:var(--soft);border-radius:12px;padding:12px;font-size:14px}
+.parsed .row{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
+.parsed .row span:first-child{color:var(--text2)}
+.parsed .row span:last-child{font-weight:600;font-variant-numeric:tabular-nums}
+.okmsg{color:var(--good);font-weight:600;font-size:14px;margin-bottom:6px}
+.errmsg{color:var(--bad);font-size:14px;margin-top:8px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+label.f{font-size:12.5px;color:var(--text2);display:flex;flex-direction:column;gap:4px}
+label.f small{color:var(--muted);font-size:11.5px}
+input.in{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);width:100%;min-height:44px}
+input.in:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.solarbox input.in{font-size:22px;font-weight:650;padding:12px 14px}
+.preview{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.preview div{background:var(--soft);border-radius:10px;padding:10px}
+.preview .k{font-size:12px;color:var(--text2)} .preview .v{font-size:18px;font-weight:650}
+.preview .v.g{color:var(--good)}
+.actions{display:flex;flex-direction:column;gap:8px;margin-top:18px}
+.connect{background:var(--soft);border-radius:12px;padding:12px;font-size:13.5px;margin-top:10px}
+.connect ol{margin:6px 0 10px 18px;padding:0}
+.connect li{margin:3px 0}
+details.more summary{cursor:pointer;color:var(--accent);font-size:14px;margin-top:12px}
+pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;overflow-x:auto;font-size:12px;white-space:pre-wrap;word-break:break-all}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom));background:#0b0b0b;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:40;display:none;max-width:90vw;text-align:center}
+@media (max-width:640px){
+  h1{font-size:19px}
+  header img{width:36px;height:36px}
+  .card{padding:14px 12px;border-radius:12px}
+  .tiles{grid-template-columns:1fr 1fr;gap:8px}
+  .tile{padding:10px 12px}
+  .tile .v{font-size:20px}
+  .scroll{display:none} .mcards{display:block}
+  #hdrAdd{display:none} .fab{display:inline-flex}
+  .overlay{align-items:flex-end}
+  .sheet{border-radius:18px 18px 0 0;max-height:94vh;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+  .fields{grid-template-columns:1fr 1fr}
+}
 </style>
 </head>
 <body>
 <main>
-  <h1>Home Solar &amp; TNB Usage Tracker</h1>
+  <header>
+    <img src="icon.svg" alt="">
+    <h1>Home Solar &amp; TNB Usage Tracker</h1>
+    <button class="btn" id="hdrAdd" type="button">+ Add month</button>
+  </header>
   <p class="sub">Real household usage = what TNB's meter sees <em>plus</em> the solar you used directly, which the bill never shows.</p>
 
   <div class="tiles" id="tiles"></div>
 
   <div class="card">
+    <h2>Bill with solar vs without solar</h2>
+    <div class="note" id="saveNote"></div>
+    <div class="legend"><span style="--c:var(--base-c)">Estimated bill without solar</span><span style="--c:var(--grid-c)">Bill actually paid</span></div>
+    <div class="chartwrap" id="c3"></div>
+  </div>
+
+  <div class="card">
     <h2>Where your electricity came from</h2>
-    <div class="note">Actual monthly usage, split into grid import (on the bill) and solar used directly (hidden from the bill).</div>
+    <div class="note">Actual monthly usage (kWh): grid import, which is on the bill, plus solar used directly, which isn't.</div>
     <div class="legend"><span style="--c:var(--grid-c)">From TNB grid</span><span style="--c:var(--solar-c)">Solar used directly</span></div>
     <div class="chartwrap" id="c1"></div>
   </div>
@@ -79,16 +164,10 @@ pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;pad
   </div>
 
   <div class="card">
-    <h2>Bill with solar vs without solar</h2>
-    <div class="note" id="saveNote"></div>
-    <div class="legend"><span style="--c:var(--base-c)">Estimated bill without solar</span><span style="--c:var(--grid-c)">Bill actually paid</span></div>
-    <div class="chartwrap" id="c3"></div>
-  </div>
-
-  <div class="card">
     <h2>Monthly details</h2>
+    <div class="note">Tap a month to correct it.</div>
     <div class="scroll"><table id="tbl"></table></div>
-    <p class="note">All energy in kWh. Import/export are from the meter section ("Maklumat Meter") on page 3 of the bill: kWh P/O (I) = import peak/off-peak, kWh P/O (E) = export. Solar generated is from the inverter app.</p>
+    <div class="mcards" id="mcards"></div>
   </div>
 
   <div class="card">
@@ -96,48 +175,113 @@ pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;pad
     <div class="formula">
       <b>Solar used directly</b> = Solar generated − Export<br>
       <b>Actual usage</b> = Import + Solar generated − Export<br>
-      <b>Net billed kWh</b> = Import − Export (NEM credits cover Energy, Capacity &amp; Network charges kWh-for-kWh; AFA, retail, service tax and KWTBB are worked out on full import)<br>
-      <b>Self-use %</b> = Solar used directly ÷ Solar generated &nbsp;·&nbsp; <b>Solar share</b> = Solar generated ÷ Actual usage
+      <b>Without-solar bill</b> = your actual usage billed under the same ToU tariff, AFA, incentive, retail, service tax and KWTBB rules as that month's bill (this method reproduces your real bills to the sen).<br>
+      <b>NEM</b> credits cover Energy, Capacity &amp; Network kWh-for-kWh; AFA, retail, tax and KWTBB are worked out on full import.
     </div>
-  </div>
-
-  <div class="card">
-    <details>
-      <summary>Add a new month</summary>
-      <p class="note">Fill in from the new bill and the solar app. The result appears below; then click "Open data.json on GitHub", paste the line into the <code>months</code> list (add a comma after the previous line) and commit.</p>
-      <form id="f">
-        <label>Month<input name="month" type="month" required></label>
-        <label>Import peak — kWh P (I)<input name="import_peak" type="number" step="any" required></label>
-        <label>Import off-peak — kWh O (I)<input name="import_offpeak" type="number" step="any" required></label>
-        <label>Export peak — kWh P (E)<input name="export_peak" type="number" step="any" required></label>
-        <label>Export off-peak — kWh O (E)<input name="export_offpeak" type="number" step="any" required></label>
-        <label>Solar generated (app)<input name="solar" type="number" step="any" required></label>
-        <label>Bill amount (RM)<input name="bill" type="number" step="any" required></label>
-        <label>Baki NEM (kWh)<input name="nem_balance" type="number" step="any" value="0"></label>
-        <label>AFA rate on bill (RM/kWh)<input name="afa" type="number" step="any" placeholder="e.g. 0.0361"></label>
-        <div style="display:flex;align-items:flex-end"><button type="submit">Calculate</button></div>
-      </form>
-      <div id="out"></div>
-    </details>
   </div>
 </main>
 
+<button class="btn fab" id="fab" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add month</button>
+
+<div class="overlay" id="ov" aria-hidden="true">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
+    <button class="x" type="button" id="shX" aria-label="Close">×</button>
+    <h3 id="shT">Add a month</h3>
+    <div class="note" id="shSub">Upload the TNB bill, then type the solar figure from your app.</div>
+
+    <div class="step">
+      <div class="lbl">1 · TNB bill</div>
+      <label class="drop" id="drop">
+        <input type="file" id="pdf" accept="application/pdf,.pdf">
+        <div class="big">📄 Choose bill PDF</div>
+        <div class="note">or drag it here · it's read on this device and never uploaded</div>
+      </label>
+      <div id="parsed"></div>
+      <details class="more" id="manualWrap"><summary id="manualSum">Enter or correct bill numbers manually</summary>
+        <div class="fields">
+          <label class="f">Bill month<input class="in" name="month" type="month"></label>
+          <label class="f">Bill amount (RM)<input class="in" name="bill" inputmode="decimal"><small>"Jumlah Bil Anda", page 1</small></label>
+          <label class="f">Import peak<input class="in" name="import_peak" inputmode="decimal"><small>kWh P (I), page 3</small></label>
+          <label class="f">Import off-peak<input class="in" name="import_offpeak" inputmode="decimal"><small>kWh O (I), page 3</small></label>
+          <label class="f">Export peak<input class="in" name="export_peak" inputmode="decimal"><small>kWh P (E), page 3</small></label>
+          <label class="f">Export off-peak<input class="in" name="export_offpeak" inputmode="decimal"><small>kWh O (E), page 3</small></label>
+          <label class="f">Baki NEM (kWh)<input class="in" name="nem_balance" inputmode="decimal"><small>page 1, right side</small></label>
+          <label class="f">AFA rate (RM/kWh)<input class="in" name="afa" inputmode="decimal"><small>"AFA (… RM0.0361/kWh)", page 2</small></label>
+        </div>
+      </details>
+    </div>
+
+    <div class="step solarbox">
+      <div class="lbl" id="solarLbl">2 · Solar generated (kWh)</div>
+      <input class="in" name="solar" id="solarIn" inputmode="decimal" placeholder="e.g. 830.16">
+      <div class="note" id="solarHint">Monthly total from your solar app for the same month.</div>
+    </div>
+
+    <div class="step" id="pvWrap" style="display:none">
+      <div class="lbl">Preview</div>
+      <div class="preview" id="pv"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" type="button" id="saveBtn" disabled>Save month</button>
+      <div class="errmsg" id="saveErr"></div>
+    </div>
+
+    <div class="connect" id="connect" style="display:none">
+      <b>One-time setup: let this device save to your tracker</b>
+      <ol>
+        <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a GitHub token</a> (sign in as jinhong1028).</li>
+        <li>Resource owner: <b id="ownerName">derektanjh</b> · Repository access: <b>Only select repositories → <span id="repoName">solar-tracker</span></b>.</li>
+        <li>Permissions → Repository → <b>Contents: Read and write</b>. Pick the longest expiry, then Generate and copy it.</li>
+        <li>Paste it below. It's stored only in this browser.</li>
+      </ol>
+      <input class="in" id="tokIn" type="password" autocomplete="off" placeholder="github_pat_…">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn" type="button" id="tokSave">Save token &amp; continue</button>
+      </div>
+    </div>
+
+    <details class="more" id="otherWrap"><summary>Other ways to save</summary>
+      <p class="note">Copy this line and paste it into the <code>months</code> list of data.json on GitHub (add a comma after the line above it).</p>
+      <pre id="line"></pre>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn secondary" type="button" id="copyBtn">Copy line</button>
+        <a class="btn secondary" id="ghEdit" target="_blank" rel="noopener">Open data.json on GitHub</a>
+      </div>
+      <p class="note" id="tokState"></p>
+    </details>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
 <script>
+/* ---------- config ---------- */
+const host=location.hostname;
+const OWNER=host.endsWith("github.io")?host.split(".")[0]:"derektanjh";
+const REPO=(host.endsWith("github.io")&&location.pathname.split("/").filter(Boolean)[0])||"solar-tracker";
+const PDFJS=window.PDFJS_BASE||"https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/legacy/build/";
+const TOKKEY="solarTrackerToken";
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+
+/* ---------- helpers ---------- */
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const lbl=m=>{const[y,mm]=m.split("-");return MON[+mm-1]+" "+y.slice(2)};
+const lblLong=m=>{const[y,mm]=m.split("-");return ["January","February","March","April","May","June","July","August","September","October","November","December"][+mm-1]+" "+y};
 const f0=n=>Math.round(n).toLocaleString();
-const f1=n=>(Math.round(n*10)/10).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:1});
+const f1=n=>(Math.round(n*10)/10).toLocaleString(undefined,{maximumFractionDigits:1});
 const rm=n=>"RM"+n.toFixed(2);
+const $=id=>document.getElementById(id);
 function calc(m){
   const imp=m.import_peak+m.import_offpeak, exp=m.export_peak+m.export_offpeak;
   const direct=m.solar-exp, usage=imp+direct;
-  return {...m,imp,exp,direct,usage,net:imp-exp,selfPct:direct/m.solar*100,share:m.solar/usage*100};
+  return {...m,imp,exp,direct,usage,selfPct:m.solar?direct/m.solar*100:0,share:usage?m.solar/usage*100:0};
 }
 function ruleFor(month,rules){return (rules||[]).find(r=>month>=r.from&&month<=r.to)}
+
+/* ---------- TNB tariff model (Domestic ToU, from Jul 2025; validated against May–Oct 2026 bills) ---------- */
 const TARIFF={pk:0.2852,op:0.2443,cap:0.0455,net:0.1285};
 const EEI=[[200,25],[250,24.5],[300,22.5],[350,21],[400,17],[450,14.5],[500,12],[550,10.5],[600,9],[650,7.5],[700,5.5],[750,4.5],[800,4],[850,2.5],[900,1],[1000,0.5]];
 function eeiRate(u){for(const[l,r]of EEI)if(u<=l)return r/100;return 0}
-// Domestic ToU bill for given peak/off-peak kWh (validated against the May-Oct 2026 bills)
 function tnbBill(peak,off,month,afa,rules){
   const u=peak+off,rule=ruleFor(month,rules),thr=rule?rule.import_limit:600,over=u>thr,e=eeiRate(u);
   const energy=peak*TARIFF.pk+off*TARIFF.op,cap=u*TARIFF.cap,net=u*TARIFF.net,afaC=over?u*afa:0,retail=over?10:0,eeiC=-u*e;
@@ -147,129 +291,233 @@ function tnbBill(peak,off,month,afa,rules){
   return energy+cap+net+afaC+retail+eeiC+st+kw;
 }
 function withoutSolar(r,rules){
-  const fp=r.exp?r.export_peak/r.exp:0.2; // solar used directly is split peak/off-peak like the exports
+  const fp=r.exp?r.export_peak/r.exp:0.2; // split solar used directly peak/off-peak like the exports
   return tnbBill(r.import_peak+r.direct*fp,r.import_offpeak+r.direct*(1-fp),r.month,r.afa||0,rules);
 }
+
+/* ---------- charts (sized to the screen) ---------- */
 const svgNS="http://www.w3.org/2000/svg";
 function el(tag,attrs,parent){const e=document.createElementNS(svgNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent&&parent.appendChild(e);return e}
-function niceMax(v){const p=Math.pow(10,Math.floor(Math.log10(v)));const s=[1,2,2.5,5,10].find(s=>s*p>=v/1)*p;return s}
-function ticks(max){const step=max<=600?100:max<=1500?200:500;const t=[];for(let i=0;i<=max+1e-9;i+=step)t.push(i);return t}
-
-function tipHandlers(wrap,tip){
-  return {show(html,x,y){tip.innerHTML=html;tip.style.display="block";
-      const w=wrap.clientWidth,tw=tip.offsetWidth;let left=x+14;if(left+tw>w)left=x-tw-14;tip.style.left=Math.max(0,left)+"px";tip.style.top=Math.max(0,y-10)+"px"},
-    hide(){tip.style.display="none"}};
+function niceStep(max,target){const raw=max/target,p=Math.pow(10,Math.floor(Math.log10(raw)));return [1,2,2.5,5,10].map(s=>s*p).find(s=>s>=raw)}
+function frame(id,opts){
+  const wrap=$(id);wrap.innerHTML="";
+  const W=Math.max(280,wrap.clientWidth||960),narrow=W<560,H=narrow?230:290;
+  const m={t:narrow?20:18,r:4,b:26,l:opts.money?(narrow?46:52):(narrow?36:44)};
+  const svg=el("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":opts.aria},wrap);
+  const tip=document.createElement("div");tip.className="tip";wrap.appendChild(tip);
+  const step=niceStep(opts.max*1.12,narrow?4:5),top=Math.ceil(opts.max*1.12/step)*step,ih=H-m.t-m.b,iw=W-m.l-m.r;
+  const Y=v=>m.t+ih-(v/top)*ih;
+  for(let t=0;t<=top+1e-9;t+=step){el("line",{x1:m.l,x2:W-m.r,y1:Y(t),y2:Y(t),stroke:"var(--grid)","stroke-width":1},svg);
+    const tx=el("text",{x:m.l-6,y:Y(t)+4,"text-anchor":"end",style:narrow?"font-size:11px":""},svg);tx.textContent=(opts.money?"RM":"")+f0(t)}
+  const show=(html,x,y)=>{tip.innerHTML=html;tip.style.display="block";const tw=tip.offsetWidth;let left=x+12;if(left+tw>W)left=Math.max(0,x-tw-12);tip.style.left=left+"px";tip.style.top=Math.max(0,y-tip.offsetHeight-8)+"px"};
+  const hide=()=>tip.style.display="none";
+  return {wrap,svg,W,H,m,iw,ih,Y,narrow,show,hide};
 }
-
-function barChart(id,rows,opts){
-  const wrap=document.getElementById(id);wrap.innerHTML="";
-  const W=960,H=300,m={t:12,r:12,b:30,l:46};
-  const iw=W-m.l-m.r,ih=H-m.t-m.b;
-  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":opts.aria},wrap);
-  const tip=document.createElement("div");tip.className="tip";wrap.appendChild(tip);const T=tipHandlers(wrap,tip);
-  const maxV=Math.max(opts.minMax||0,...rows.map(opts.total));
-  const step=maxV<=600?100:maxV<=1500?200:500;const top=Math.ceil(maxV*1.1/step)*step;
-  const tk=ticks(top),Y=v=>m.t+ih-(v/top)*ih;
-  tk.forEach(t=>{el("line",{x1:m.l,x2:W-m.r,y1:Y(t),y2:Y(t),stroke:"var(--grid)","stroke-width":1},svg);
-    const tx=el("text",{x:m.l-8,y:Y(t)+4,"text-anchor":"end"},svg);tx.textContent=f0(t)});
-  const band=iw/rows.length,bw=Math.min(56,band*0.5);
-  if(opts.limitLine){rows.forEach((r,i)=>{const lim=opts.limitLine(r);if(lim==null)return;const x0=m.l+band*i+band/2-band*0.42,x1=x0+band*0.84;
-    el("line",{x1:x0,x2:x1,y1:Y(lim),y2:Y(lim),stroke:"var(--warn)","stroke-width":2,"stroke-dasharray":"5 4"},svg)})}
+function hitArea(F,i,band,html){
+  const hit=el("rect",{x:F.m.l+band*i,y:F.m.t,width:band,height:F.ih,fill:"transparent"},F.svg);
+  const mv=e=>{const b=F.wrap.getBoundingClientRect();F.show(html,e.clientX-b.left,e.clientY-b.top)};
+  hit.addEventListener("pointermove",mv);hit.addEventListener("pointerdown",mv);hit.addEventListener("pointerleave",F.hide);
+}
+function roundTop(x,y0,y1,w){const h=y0-y1,r=Math.min(4,Math.max(0,h));return `M${x},${y0} V${y1+r} Q${x},${y1} ${x+r},${y1} H${x+w-r} Q${x+w},${y1} ${x+w},${y1+r} V${y0} Z`}
+function stackChart(id,rows,o){
+  const F=frame(id,{aria:o.aria,max:Math.max(o.minMax||0,...rows.map(o.total))});
+  const band=F.iw/rows.length,bw=Math.min(F.narrow?30:52,band*0.56);
+  if(o.limitLine)rows.forEach((r,i)=>{const lim=o.limitLine(r);if(lim==null)return;const x0=F.m.l+band*i+band*0.06;
+    el("line",{x1:x0,x2:x0+band*0.88,y1:F.Y(lim),y2:F.Y(lim),stroke:"var(--warn)","stroke-width":2,"stroke-dasharray":"5 4"},F.svg)});
   rows.forEach((r,i)=>{
-    const cx=m.l+band*i+band/2,x=cx-bw/2;let acc=0;
-    const segs=opts.series.map(s=>({s,v:Math.max(0,s.value(r))}));
-    segs.forEach((g,j)=>{
-      const y0=Y(acc),y1=Y(acc+g.v);acc+=g.v;const h=y0-y1-(j<segs.length-1?0:0);
-      const gap=j>0?2:0;const isTop=j===segs.length-1;
-      const hh=Math.max(0,h-gap);
-      if(isTop){const rr=Math.min(4,hh);
-        el("path",{d:`M${x},${y0-gap} V${y1+rr} Q${x},${y1} ${x+rr},${y1} H${x+bw-rr} Q${x+bw},${y1} ${x+bw},${y1+rr} V${y0-gap} Z`,fill:g.s.color},svg)}
-      else el("rect",{x,y:y1,width:bw,height:hh,fill:g.s.color},svg);
-    });
-    if(opts.topLabel){const lim=opts.limitLine?opts.limitLine(r):null;const ty=Math.min(Y(acc),lim!=null?Y(lim):1e9)-6;const t=el("text",{x:cx,y:ty,"text-anchor":"middle",style:"fill:var(--text);font-weight:600"},svg);t.textContent=opts.topLabel(r)}
-    const xl=el("text",{x:cx,y:H-8,"text-anchor":"middle"},svg);xl.textContent=lbl(r.month);
-    const hit=el("rect",{x:m.l+band*i,y:m.t,width:band,height:ih,fill:"transparent"},svg);
-    hit.addEventListener("mousemove",e=>{const b=wrap.getBoundingClientRect();T.show(opts.tip(r),e.clientX-b.left,e.clientY-b.top)});
-    hit.addEventListener("mouseleave",T.hide);
+    const cx=F.m.l+band*i+band/2,x=cx-bw/2;let acc=0;
+    o.series.forEach((s,j)=>{const v=Math.max(0,s.value(r)),y0=F.Y(acc)-(j>0?2:0),y1=F.Y(acc+v);acc+=v;
+      if(y0>y1)el("path",{d:j===o.series.length-1?roundTop(x,y0,y1,bw):`M${x},${y0} V${y1} H${x+bw} V${y0} Z`,fill:s.color},F.svg)});
+    const lim=o.limitLine?o.limitLine(r):null,ty=Math.min(F.Y(acc),lim!=null?F.Y(lim):1e9)-6;
+    const t=el("text",{x:cx,y:ty,"text-anchor":"middle",style:`fill:var(--text);font-weight:600;font-size:${F.narrow?10.5:12}px`},F.svg);t.textContent=o.topLabel(r);
+    const xl=el("text",{x:cx,y:F.H-7,"text-anchor":"middle",style:F.narrow?"font-size:11px":""},F.svg);xl.textContent=F.narrow?lbl(r.month).split(" ")[0]:lbl(r.month);
+    hitArea(F,i,band,o.tip(r));
+  });
+}
+function groupChart(id,rows,o){
+  const F=frame(id,{aria:o.aria,money:true,max:Math.max(...rows.flatMap(r=>o.series.map(s=>s.value(r))))});
+  const band=F.iw/rows.length,k=o.series.length,bw=Math.min(F.narrow?18:38,band*0.32),gap=2;
+  rows.forEach((r,i)=>{
+    const cx=F.m.l+band*i+band/2,x0=cx-(k*bw+(k-1)*gap)/2;
+    o.series.forEach((s,j)=>{const v=s.value(r),x=x0+j*(bw+gap),y=F.Y(Math.max(0,v));
+      el("path",{d:roundTop(x,F.Y(0),y,bw),fill:s.color},F.svg);
+      if(!F.narrow||j===0){const t=el("text",{x:F.narrow?cx:x+bw/2,y:y-5,"text-anchor":"middle",style:`fill:var(--text);font-weight:600;font-size:${F.narrow?10.5:11}px`},F.svg);t.textContent="RM"+Math.round(v)}});
+    const xl=el("text",{x:cx,y:F.H-7,"text-anchor":"middle",style:F.narrow?"font-size:11px":""},F.svg);xl.textContent=F.narrow?lbl(r.month).split(" ")[0]:lbl(r.month);
+    hitArea(F,i,band,o.tip(r));
   });
 }
 
-function groupChart(id,rows,opts){
-  const wrap=document.getElementById(id);wrap.innerHTML="";
-  const W=960,H=300,m={t:18,r:12,b:30,l:52},iw=W-m.l-m.r,ih=H-m.t-m.b;
-  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":opts.aria},wrap);
-  const tip=document.createElement("div");tip.className="tip";wrap.appendChild(tip);const T=tipHandlers(wrap,tip);
-  const maxV=Math.max(...rows.flatMap(r=>opts.series.map(s=>s.value(r))));
-  const step=maxV<=300?50:maxV<=600?100:200,top=Math.ceil(maxV*1.12/step)*step,Y=v=>m.t+ih-(v/top)*ih;
-  for(let t=0;t<=top;t+=step){el("line",{x1:m.l,x2:W-m.r,y1:Y(t),y2:Y(t),stroke:"var(--grid)","stroke-width":1},svg);
-    const tx=el("text",{x:m.l-8,y:Y(t)+4,"text-anchor":"end"},svg);tx.textContent="RM"+t}
-  const band=iw/rows.length,k=opts.series.length,bw=Math.min(40,band*0.3),gap=2;
-  rows.forEach((r,i)=>{
-    const cx=m.l+band*i+band/2,x0=cx-(k*bw+(k-1)*gap)/2;
-    opts.series.forEach((s,j)=>{const v=s.value(r),x=x0+j*(bw+gap),y=Y(v),h=Y(0)-y,rr=Math.min(4,h);
-      el("path",{d:`M${x},${Y(0)} V${y+rr} Q${x},${y} ${x+rr},${y} H${x+bw-rr} Q${x+bw},${y} ${x+bw},${y+rr} V${Y(0)} Z`,fill:s.color},svg);
-      const t=el("text",{x:x+bw/2,y:y-5,"text-anchor":"middle",style:"fill:var(--text);font-weight:600;font-size:11px"},svg);t.textContent=opts.label(v)});
-    const xl=el("text",{x:cx,y:H-8,"text-anchor":"middle"},svg);xl.textContent=lbl(r.month);
-    const hit=el("rect",{x:m.l+band*i,y:m.t,width:band,height:ih,fill:"transparent"},svg);
-    hit.addEventListener("mousemove",e=>{const b=wrap.getBoundingClientRect();T.show(opts.tip(r),e.clientX-b.left,e.clientY-b.top)});
-    hit.addEventListener("mouseleave",T.hide);
-  });
-}
-
-fetch("data.json?"+Date.now()).then(r=>r.json()).then(data=>{
-  const rules=data.rules;window.__rules=rules;
-  const rows=data.months.slice().sort((a,b)=>a.month.localeCompare(b.month)).map(calc).map(r=>{const w=withoutSolar(r,rules);return {...r,wo:w,saved:w-r.bill}});
-  const last=rows.at(-1),n=rows.length;
-  const sum=k=>rows.reduce((a,r)=>a+r[k],0);
-  const avgUse=sum("usage")/n,avgImp=sum("imp")/n,totalBill=sum("bill");
-  const lr=ruleFor(last.month,rules);
-  document.getElementById("tiles").innerHTML=`
-    <div class="tile"><div class="k">Actual usage · ${lbl(last.month)}</div><div class="v">${f0(last.usage)} kWh</div><div class="d">Bill shows only ${f0(last.imp)} kWh import</div></div>
-    <div class="tile"><div class="k">Average actual usage</div><div class="v">${f0(avgUse)} kWh</div><div class="d">per month, ${n} months</div></div>
-    <div class="tile"><div class="k">Solar share of usage · ${lbl(last.month)}</div><div class="v">${f0(last.share)}%</div><div class="d">${f0(last.selfPct)}% of solar used directly</div></div>
-    <div class="tile"><div class="k">Bill paid · ${lbl(last.month)}</div><div class="v">${rm(last.bill)}</div><div class="d">${rm(totalBill)} total over ${n} months</div></div>
-    <div class="tile"><div class="k">Saved by solar · ${lbl(last.month)}</div><div class="v">${rm(last.saved)}</div><div class="d">${rm(sum("saved"))} over ${n} months (est.)</div></div>
-    <div class="tile"><div class="k">NEM balance left</div><div class="v">${f0(last.nem_balance)} kWh</div><div class="d">Unused credit; balance expires 31 Dec</div></div>`;
-
-  barChart("c1",rows,{aria:"Stacked bars of monthly actual usage: grid import plus solar used directly",
-    total:r=>r.usage,
-    series:[{name:"From TNB grid",color:"var(--grid-c)",value:r=>r.imp},{name:"Solar used directly",color:"var(--solar-c)",value:r=>r.direct}],
-    topLabel:r=>f0(r.usage),
-    tip:r=>`<b>${lbl(r.month)} — ${f0(r.usage)} kWh actual</b><i style="background:var(--grid-c)"></i>From grid: ${f0(r.imp)} kWh<br><i style="background:var(--solar-c)"></i>Solar used directly: ${f1(r.direct)} kWh<br><span style="color:var(--muted)">Solar generated ${f1(r.solar)} · exported ${f0(r.exp)}</span>`});
-
-  const limits=rows.map(r=>ruleFor(r.month,rules)).filter(Boolean);
-  document.getElementById("limitNote").textContent=limits.length?`${limits[0].note} (bills ${lbl(limits[0].from)} to ${lbl(limits[0].to)}). The limit is checked against import, not actual usage.`:"No import limit rule active.";
-  barChart("c2",rows,{aria:"Monthly grid import compared with the 800 kWh limit",
-    total:r=>r.imp,minMax:850,
-    series:[{name:"Import",color:"var(--grid-c)",value:r=>r.imp}],
-    topLabel:r=>f0(r.imp),
-    limitLine:r=>{const x=ruleFor(r.month,rules);return x?x.import_limit:null},
-    tip:r=>{const x=ruleFor(r.month,rules);return `<b>${lbl(r.month)} — import ${f0(r.imp)} kWh</b>Peak ${f0(r.import_peak)} · Off-peak ${f0(r.import_offpeak)}<br>`+(x?(r.imp<=x.import_limit?`Under ${x.import_limit} kWh by ${f0(x.import_limit-r.imp)}`:`Over ${x.import_limit} kWh by ${f0(r.imp-x.import_limit)}`):"No limit rule this month")}});
-
-  document.getElementById("saveNote").textContent=`Without solar you would have paid about ${rm(sum("wo"))} over ${n} months instead of ${rm(sum("bill"))}, an estimated saving of ${rm(sum("saved"))} (about ${rm(sum("saved")/n)} a month). Estimate = your actual usage billed at the same ToU tariff, AFA, incentive and tax rules as each bill.`;
+/* ---------- render ---------- */
+let DATA=null,ROWS=[];
+function render(){
+  const rules=DATA.rules;
+  ROWS=DATA.months.slice().sort((a,b)=>a.month.localeCompare(b.month)).map(calc).map(r=>{const w=withoutSolar(r,rules);return {...r,wo:w,saved:w-r.bill}});
+  const rows=ROWS;if(!rows.length)return;
+  const last=rows.at(-1),n=rows.length,sum=k=>rows.reduce((a,r)=>a+r[k],0);
+  $("tiles").innerHTML=`
+    <div class="tile hero"><div class="k">Saved by solar · ${lbl(last.month)}</div><div class="v">${rm(last.saved)}</div><div class="d">${rm(sum("saved"))} over ${n} months (est.)</div></div>
+    <div class="tile"><div class="k">Bill paid · ${lbl(last.month)}</div><div class="v">${rm(last.bill)}</div><div class="d">vs ~${rm(last.wo)} without solar</div></div>
+    <div class="tile"><div class="k">Actual usage · ${lbl(last.month)}</div><div class="v">${f0(last.usage)} kWh</div><div class="d">Bill shows only ${f0(last.imp)} kWh</div></div>
+    <div class="tile"><div class="k">Average actual usage</div><div class="v">${f0(sum("usage")/n)} kWh</div><div class="d">per month, ${n} months</div></div>
+    <div class="tile"><div class="k">Solar share · ${lbl(last.month)}</div><div class="v">${f0(last.share)}%</div><div class="d">${f0(last.selfPct)}% of solar used directly</div></div>
+    <div class="tile"><div class="k">NEM balance left</div><div class="v">${f0(last.nem_balance)} kWh</div><div class="d">Unused credit; expires 31 Dec</div></div>`;
+  $("saveNote").textContent=`Without solar you'd have paid about ${rm(sum("wo"))} over ${n} months instead of ${rm(sum("bill"))}: an estimated ${rm(sum("saved"))} saved, about ${rm(sum("saved")/n)} a month.`;
   groupChart("c3",rows,{aria:"Monthly bill without solar compared with the bill actually paid",
-    series:[{name:"Without solar",color:"var(--base-c)",value:r=>r.wo},{name:"Paid",color:"var(--grid-c)",value:r=>r.bill}],
-    label:v=>"RM"+Math.round(v),
-    tip:r=>`<b>${lbl(r.month)} — saved ${rm(r.saved)}</b><i style="background:var(--base-c)"></i>Without solar: ${rm(r.wo)} (${f0(r.usage)} kWh)<br><i style="background:var(--grid-c)"></i>Paid: ${rm(r.bill)}`});
+    series:[{color:"var(--base-c)",value:r=>r.wo},{color:"var(--grid-c)",value:r=>r.bill}],
+    tip:r=>`<b>${lbl(r.month)} · saved ${rm(r.saved)}</b><i style="background:var(--base-c)"></i>Without solar: ${rm(r.wo)}<br><i style="background:var(--grid-c)"></i>Paid: ${rm(r.bill)}`});
+  stackChart("c1",rows,{aria:"Monthly actual usage: grid import plus solar used directly",total:r=>r.usage,
+    series:[{color:"var(--grid-c)",value:r=>r.imp},{color:"var(--solar-c)",value:r=>r.direct}],topLabel:r=>f0(r.usage),
+    tip:r=>`<b>${lbl(r.month)} · ${f0(r.usage)} kWh actual</b><i style="background:var(--grid-c)"></i>From grid: ${f0(r.imp)} kWh<br><i style="background:var(--solar-c)"></i>Solar used directly: ${f1(r.direct)} kWh<br><span style="color:var(--muted)">Generated ${f1(r.solar)} · exported ${f0(r.exp)}</span>`});
+  const lim=rows.map(r=>ruleFor(r.month,rules)).filter(Boolean)[0];
+  $("limitNote").textContent=lim?`${lim.note} (bills ${lbl(lim.from)} to ${lbl(lim.to)}). The limit is checked against import, not actual usage.`:"No import limit rule active.";
+  stackChart("c2",rows,{aria:"Monthly grid import compared with the 800 kWh limit",total:r=>r.imp,minMax:850,
+    series:[{color:"var(--grid-c)",value:r=>r.imp}],topLabel:r=>f0(r.imp),
+    limitLine:r=>{const x=ruleFor(r.month,rules);return x?x.import_limit:null},
+    tip:r=>{const x=ruleFor(r.month,rules);return `<b>${lbl(r.month)} · import ${f0(r.imp)} kWh</b>Peak ${f0(r.import_peak)} · Off-peak ${f0(r.import_offpeak)}<br>`+(x?(r.imp<=x.import_limit?`Under ${x.import_limit} by ${f0(x.import_limit-r.imp)}`:`Over ${x.import_limit} by ${f0(r.imp-x.import_limit)}`):"No limit rule this month")}});
+  const flag=r=>{const x=ruleFor(r.month,rules);return x?(r.imp<=x.import_limit?'<span class="flag ok">✓ under</span>':'<span class="flag over">▲ over</span>'):'<span class="note">—</span>'};
+  $("tbl").innerHTML=`<thead><tr><th>Month</th><th>Import</th><th>Export</th><th>Solar gen.</th><th>Solar used</th><th>Actual usage</th><th>Self-use</th><th>NEM bal.</th><th>Paid</th><th>Without solar</th><th>Saved</th><th>800 limit</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr data-m="${r.month}"><td>${lbl(r.month)}</td><td>${f0(r.imp)}</td><td>${f0(r.exp)}</td><td>${f1(r.solar)}</td><td>${f1(r.direct)}</td><td class="hl">${f1(r.usage)}</td><td>${f0(r.selfPct)}%</td><td>${f0(r.nem_balance)}</td><td>${rm(r.bill)}</td><td>${rm(r.wo)}</td><td class="hl">${rm(r.saved)}</td><td>${flag(r)}</td></tr>`).join("")+"</tbody>";
+  $("mcards").innerHTML=rows.slice().reverse().map(r=>`<div class="mcard" data-m="${r.month}">
+    <div class="top"><b>${lblLong(r.month)}</b><span class="save">saved ${rm(r.saved)}</span></div>${(()=>{const x=ruleFor(r.month,rules);return x?`<div class="note" style="margin-top:2px">${r.imp<=x.import_limit?"✓ Import under "+x.import_limit+" kWh":"▲ Import over "+x.import_limit+" kWh"}</div>`:""})()}
+    <div class="grid"><span>Actual usage <b>${f0(r.usage)} kWh</b></span><span>Paid <b>${rm(r.bill)}</b></span>
+    <span>Import <b>${f0(r.imp)}</b> · Export <b>${f0(r.exp)}</b></span><span>Without solar <b>${rm(r.wo)}</b></span>
+    <span>Solar <b>${f1(r.solar)}</b> (${f0(r.selfPct)}% used)</span><span>NEM bal. <b>${f0(r.nem_balance)} kWh</b></span></div></div>`).join("");
+  document.querySelectorAll("[data-m]").forEach(e=>e.onclick=()=>openSheet(DATA.months.find(m=>m.month===e.dataset.m)));
+}
+let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>DATA&&render(),150)});
+fetch("data.json?"+Date.now()).then(r=>r.json()).then(d=>{DATA=d;render()}).catch(e=>{$("tiles").innerHTML='<div class="tile">Could not load data.json: '+e+'</div>'});
 
-  const tb=document.getElementById("tbl");
-  tb.innerHTML=`<thead><tr><th>Month</th><th>Import</th><th>Export</th><th>Solar generated</th><th>Solar used directly</th><th>Actual usage</th><th>Self-use %</th><th>Solar share</th><th>NEM balance</th><th>Bill</th><th>Without solar</th><th>Saved</th><th>800 kWh limit</th></tr></thead><tbody>`+
-    rows.map(r=>{const x=ruleFor(r.month,rules);const flag=x?(r.imp<=x.import_limit?'<span class="flag ok">✓ under</span>':'<span class="flag over">▲ over</span>'):'<span class="note">—</span>';
-      return `<tr><td>${lbl(r.month)}</td><td>${f0(r.imp)}</td><td>${f0(r.exp)}</td><td>${f1(r.solar)}</td><td>${f1(r.direct)}</td><td class="hl">${f1(r.usage)}</td><td>${f0(r.selfPct)}%</td><td>${f0(r.share)}%</td><td>${f0(r.nem_balance)}</td><td>${rm(r.bill)}</td><td>${rm(r.wo)}</td><td class="hl">${rm(r.saved)}</td><td>${flag}</td></tr>`}).join("")+"</tbody>";
-}).catch(e=>{document.getElementById("tiles").innerHTML='<div class="tile">Could not load data.json: '+e+'</div>'});
+/* ---------- bill PDF reading (pdf.js, runs on this device) ---------- */
+let pdfjsLib=null;
+async function loadPdfjs(){if(pdfjsLib)return pdfjsLib;const lib=await import(PDFJS+"pdf.min.mjs");lib.GlobalWorkerOptions.workerSrc=PDFJS+"pdf.worker.min.mjs";return pdfjsLib=lib}
+async function pdfText(file){
+  const lib=await loadPdfjs(),doc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;let s="";
+  for(let i=1;i<=doc.numPages;i++){const c=await (await doc.getPage(i)).getTextContent();s+=c.items.map(x=>x.str).join(" ")+" "}
+  return s;
+}
+function parseBillText(t){
+  t=t.replace(/\s+/g," ");
+  const num=s=>parseFloat(String(s).replace(/,/g,"")),out={},miss=[];
+  const per=t.match(/(\d{2})\.(\d{2})\.(\d{4})\s*-\s*(\d{2})\.(\d{2})\.(\d{4})/);
+  if(per){const sd=+per[1];out.month=sd<=15?`${per[3]}-${per[2]}`:`${per[6]}-${per[5]}`;out.period=`${per[1]}.${per[2]} – ${per[4]}.${per[5]}.${per[6]}`}else miss.push("billing period");
+  const reg={import_peak:/(\d[\d,]*)\s*kWh\s*P\s*\(\s*I\s*\)/,import_offpeak:/(\d[\d,]*)\s*kWh\s*O\s*\(\s*I\s*\)/,export_peak:/(\d[\d,]*)\s*kWh\s*P\s*\(\s*E\s*\)/,export_offpeak:/(\d[\d,]*)\s*kWh\s*O\s*\(\s*E\s*\)/};
+  for(const k in reg){const m=t.match(reg[k]);if(m)out[k]=num(m[1]);else miss.push(k.replace("_"," "))}
+  let m=t.match(/Jumlah Bil Anda\s*\(RM\)\s*(-?[\d,]+\.\d{2})/);if(m)out.bill=num(m[1]);else miss.push("bill amount");
+  m=t.match(/Baki NEM\s*(\d[\d,]*)\s*kWh/);out.nem_balance=m?num(m[1]):0;
+  m=t.match(/AFA\s*\(\s*[\d,]+\s*kWh\s*,\s*(-?)\s*RM\s*(-?[\d.]+)\s*\/\s*kWh/);if(m)out.afa=num(m[2])*(m[1]==="-"?-1:1);else miss.push("AFA rate");
+  return {data:out,missing:miss};
+}
 
-document.getElementById("f").addEventListener("submit",e=>{
-  e.preventDefault();const fd=new FormData(e.target);const o={month:fd.get("month")};
-  ["import_peak","import_offpeak","export_peak","export_offpeak","solar","bill","nem_balance","afa"].forEach(k=>o[k]=+fd.get(k)||0);
-  const r=calc(o);const wo=withoutSolar(r,window.__rules||[]);
-  const host=location.hostname,owner=host.endsWith("github.io")?host.split(".")[0]:"YOUR-USERNAME";
-  const repo=location.pathname.split("/").filter(Boolean)[0]||"REPO";
-  const line=JSON.stringify(o).replace(/,"/g,', "').replace(/":/g,'": ');
-  document.getElementById("out").innerHTML=`<p><b>${lbl(o.month)}:</b> actual usage <b>${f1(r.usage)} kWh</b> (import ${f0(r.imp)} + solar used directly ${f1(r.direct)}), self-use ${f0(r.selfPct)}%, solar share ${f0(r.share)}%. Without solar the bill would be about <b>${rm(wo)}</b>, so solar saved about <b>${rm(wo-o.bill)}</b>.</p>
-    <pre id="line">${line}</pre>
-    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('line').textContent);this.textContent='Copied'">Copy line</button>
-    <a class="btn" target="_blank" href="https://github.com/${owner}/${repo}/edit/main/data.json">Open data.json on GitHub</a>`;
-});
+/* ---------- add / edit sheet ---------- */
+const KEYS=["month","import_peak","import_offpeak","export_peak","export_offpeak","solar","bill","nem_balance","afa"];
+const field=k=>k==="solar"?$("solarIn"):document.querySelector(`.fields [name="${k}"]`);
+function readForm(){const o={};for(const k of KEYS){const v=field(k).value.trim();o[k]=k==="month"?v:(v===""?NaN:parseFloat(v.replace(/,/g,"")))}if(isNaN(o.nem_balance))o.nem_balance=0;if(isNaN(o.afa))o.afa=0;return o}
+function fillForm(o){for(const k of KEYS){if(o[k]!==undefined&&o[k]!==null)field(k).value=o[k]}}
+function valid(o){return /^\d{4}-\d{2}$/.test(o.month)&&["import_peak","import_offpeak","export_peak","export_offpeak","solar","bill"].every(k=>isFinite(o[k]))}
+function nextMonth(){if(!ROWS.length)return "";const[y,m]=ROWS.at(-1).month.split("-").map(Number);return m===12?`${y+1}-01`:`${y}-${String(m+1).padStart(2,"0")}`}
+function update(){
+  const o=readForm(),ok=valid(o);
+  $("solarLbl").textContent=`2 · Solar generated${/^\d{4}-\d{2}$/.test(o.month)?" in "+lblLong(o.month):""} (kWh)`;
+  const exists=ok&&DATA&&DATA.months.some(m=>m.month===o.month);
+  $("saveBtn").textContent=ok?(exists?`Update ${lblLong(o.month)}`:`Save ${lblLong(o.month)}`):"Save month";
+  $("saveBtn").disabled=!ok;
+  if(!ok){$("pvWrap").style.display="none";$("line").textContent="Fill in the bill and solar figures first.";return}
+  const r=calc(o),wo=withoutSolar(r,DATA?DATA.rules:[]);
+  $("pvWrap").style.display="";
+  $("pv").innerHTML=`<div><div class="k">Actual usage</div><div class="v">${f0(r.usage)} kWh</div></div>
+    <div><div class="k">Saved by solar</div><div class="v g">${rm(wo-o.bill)}</div></div>
+    <div><div class="k">Paid / without solar</div><div class="v">${rm(o.bill)} / ${rm(wo)}</div></div>
+    <div><div class="k">Solar used directly</div><div class="v">${f0(r.direct)} kWh</div></div>`;
+  if(r.direct<0)$("pv").insertAdjacentHTML("beforeend",`<div style="grid-column:1/-1" class="errmsg">Solar generated is lower than export, so check the solar figure is for the right month.</div>`);
+  $("line").textContent=fmtMonth(o);
+}
+function fmtMonth(o){const x={};KEYS.forEach(k=>x[k]=o[k]);return JSON.stringify(x).replace(/,"/g,', "').replace(/":/g,'": ')}
+function serialize(d){return '{\n  "months": [\n'+d.months.map(m=>"    "+fmtMonth(m)).join(",\n")+'\n  ],\n  "rules": [\n'+d.rules.map(r=>"    "+JSON.stringify(r).replace(/,"/g,', "').replace(/":/g,'": ')).join(",\n")+'\n  ]\n}\n'}
+function openSheet(existing){
+  document.querySelectorAll(".fields input").forEach(i=>i.value="");$("solarIn").value="";$("pdf").value="";
+  $("parsed").innerHTML="";$("saveErr").textContent="";$("connect").style.display="none";
+  if(existing){$("shT").textContent=`Edit ${lblLong(existing.month)}`;$("shSub").textContent="Correct any number, or upload the bill again.";fillForm(existing);$("manualWrap").open=true}
+  else{$("shT").textContent="Add a month";$("shSub").textContent="Upload the TNB bill, then type the solar figure from your app.";field("month").value=nextMonth();$("manualWrap").open=false}
+  $("ghEdit").href=`https://github.com/${OWNER}/${REPO}/edit/main/data.json`;
+  $("ownerName").textContent=OWNER;$("repoName").textContent=REPO;
+  $("tokState").innerHTML=store.get(TOKKEY)?'This device is connected to GitHub. <button class="btn link" type="button" id="tokDel">Disconnect</button>':"";
+  const td=$("tokDel");if(td)td.onclick=()=>{store.del(TOKKEY);$("tokState").textContent="Disconnected."};
+  update();$("ov").classList.add("open");$("ov").setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
+}
+function closeSheet(){$("ov").classList.remove("open");$("ov").setAttribute("aria-hidden","true");document.body.style.overflow=""}
+$("fab").onclick=$("hdrAdd").onclick=()=>openSheet(null);
+$("shX").onclick=closeSheet;
+$("ov").addEventListener("click",e=>{if(e.target.id==="ov")closeSheet()});
+addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+document.querySelectorAll(".sheet input.in").forEach(i=>i.addEventListener("input",update));
+
+async function handlePdf(file){
+  if(!file)return;
+  $("parsed").innerHTML='<div class="note" style="margin-top:8px">Reading bill…</div>';
+  try{
+    const {data,missing}=parseBillText(await pdfText(file));
+    fillForm(data);update();
+    const imp=(data.import_peak||0)+(data.import_offpeak||0),exp=(data.export_peak||0)+(data.export_offpeak||0);
+    $("parsed").innerHTML=`<div class="parsed" style="margin-top:10px">
+      <div class="okmsg">${missing.length?"⚠️ Read most of the bill":"✓ Bill read"}${data.month?" · "+lblLong(data.month):""}</div>
+      ${data.period?`<div class="row"><span>Billing period</span><span>${data.period}</span></div>`:""}
+      <div class="row"><span>Import from TNB</span><span>${f0(imp)} kWh (${data.import_peak??"?"} peak / ${data.import_offpeak??"?"} off-peak)</span></div>
+      <div class="row"><span>Export to TNB</span><span>${f0(exp)} kWh</span></div>
+      <div class="row"><span>Bill amount</span><span>${data.bill!=null?rm(data.bill):"?"}</span></div>
+      <div class="row"><span>NEM balance · AFA</span><span>${data.nem_balance} kWh · RM${data.afa??"?"}/kWh</span></div>
+      ${missing.length?`<div class="errmsg">Couldn't find: ${missing.join(", ")}. Please fill these in under "Enter or correct bill numbers manually".</div>`:""}</div>`;
+    if(missing.length)$("manualWrap").open=true;
+    if(DATA&&data.month&&DATA.months.some(m=>m.month===data.month)&&!$("solarIn").value){const ex=DATA.months.find(m=>m.month===data.month);$("solarIn").value=ex.solar;update()}
+    setTimeout(()=>{$("solarIn").focus();$("solarIn").scrollIntoView({block:"center",behavior:"smooth"})},50);
+  }catch(e){
+    $("parsed").innerHTML=`<div class="errmsg">Couldn't read that PDF (${e.message||e}). You can type the numbers in manually instead.</div>`;$("manualWrap").open=true;
+  }
+}
+$("pdf").addEventListener("change",e=>handlePdf(e.target.files[0]));
+const drop=$("drop");
+["dragenter","dragover"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("drag")}));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("drag")}));
+drop.addEventListener("drop",e=>handlePdf(e.dataTransfer.files[0]));
+
+/* ---------- save to GitHub ---------- */
+const b64enc=s=>btoa(unescape(encodeURIComponent(s)));
+const b64dec=s=>decodeURIComponent(escape(atob(s.replace(/\s/g,""))));
+async function ghSave(entry,tok){
+  const url=`https://api.github.com/repos/${OWNER}/${REPO}/contents/data.json`;
+  const H={Authorization:"Bearer "+tok,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};
+  const g=await fetch(url+"?ref=main",{headers:H,cache:"no-store"});
+  if(!g.ok)throw g.status;
+  const j=await g.json(),cur=JSON.parse(b64dec(j.content));
+  const i=cur.months.findIndex(m=>m.month===entry.month);
+  if(i>=0)cur.months[i]=entry;else cur.months.push(entry);
+  cur.months.sort((a,b)=>a.month.localeCompare(b.month));
+  const p=await fetch(url,{method:"PUT",headers:{...H,"Content-Type":"application/json"},body:JSON.stringify({message:`${i>=0?"Update":"Add"} ${lblLong(entry.month)} bill`,content:b64enc(serialize(cur)),sha:j.sha,branch:"main"})});
+  if(!p.ok)throw p.status;
+  return cur;
+}
+function errText(code){
+  if(code===401)return "GitHub didn't accept the token (wrong or expired). Paste a new one below.";
+  if(code===403||code===404)return `The token can't write to ${OWNER}/${REPO}. Check it has Contents: Read and write for this repo. New tokens for an organization may need approval first: <a href="https://github.com/organizations/${OWNER}/settings/personal-access-token-requests" target="_blank" rel="noopener">approve it here</a>.`;
+  if(code===409||code===422)return "Someone changed data.json at the same time. Tap save again.";
+  return "Couldn't reach GitHub ("+code+"). Check your connection and try again.";
+}
+function toast(msg){const t=$("toast");t.textContent=msg;t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",4200)}
+async function doSave(){
+  const o=readForm();if(!valid(o))return;
+  const entry={};KEYS.forEach(k=>entry[k]=o[k]);
+  const tok=store.get(TOKKEY);
+  if(!tok){$("connect").style.display="block";$("connect").scrollIntoView({block:"center",behavior:"smooth"});return}
+  $("saveBtn").disabled=true;$("saveBtn").textContent="Saving…";$("saveErr").textContent="";
+  try{
+    DATA=await ghSave(entry,tok);render();closeSheet();
+    toast(`${lblLong(entry.month)} saved ✓ Other devices will see it within about a minute.`);
+  }catch(code){
+    $("saveErr").innerHTML=errText(code);if(code===401||code===403||code===404)$("connect").style.display="block";update();
+  }
+}
+$("saveBtn").onclick=doSave;
+$("tokSave").onclick=()=>{const v=$("tokIn").value.trim();if(!v)return;if(!store.set(TOKKEY,v)){$("saveErr").textContent="This browser won't store the token (private mode?).";return}$("tokIn").value="";$("connect").style.display="none";doSave()};
+$("copyBtn").onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText($("line").textContent).then(()=>{$("copyBtn").textContent="Copied ✓"})};
 </script>
 </body>
 </html>
