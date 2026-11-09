@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Solar &amp; TNB Usage Tracker</title>
+<style>
+:root{
+  color-scheme:light;
+  --surface:#fcfcfb; --card:#ffffff; --line:#e6e5e1; --grid:#eeede9;
+  --text:#0b0b0b; --text2:#52514e; --muted:#8a8984;
+  --grid-c:#2a78d6;   /* series 1: from TNB grid */
+  --solar-c:#eb6834;  /* series 2: solar used directly */
+  --export-c:#86b6ef; /* exported (lighter blue step) */
+  --warn:#b45309; --good:#15803d;
+}
+@media (prefers-color-scheme:dark){
+  :root{color-scheme:dark;--surface:#1a1a19;--card:#232322;--line:#3a3a38;--grid:#2e2e2c;
+  --text:#f0efec;--text2:#c3c2b7;--muted:#8f8e86;--grid-c:#3987e5;--solar-c:#d95926;--export-c:#5598e7;--warn:#f59e0b;--good:#4ade80}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1040px;margin:0 auto;padding:28px 18px 60px}
+h1{font-size:24px;margin:0 0 4px}
+h2{font-size:17px;margin:0 0 4px}
+.sub{color:var(--text2);margin:0 0 22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:18px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.tile .k{font-size:13px;color:var(--text2)}
+.tile .v{font-size:26px;font-weight:650;margin-top:2px}
+.tile .d{font-size:12.5px;color:var(--muted)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--text2);margin:6px 0 4px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;background:var(--c);vertical-align:-1px}
+.chartwrap{position:relative}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{fill:var(--text2);font-size:12px}
+.tip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.12);display:none;white-space:nowrap;z-index:5}
+.tip b{display:block;margin-bottom:2px}
+.tip i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--text2);font-weight:600;font-size:12.5px}
+td.hl{font-weight:650}
+.scroll{overflow-x:auto}
+.flag{font-size:12px;padding:1px 7px;border-radius:99px;border:1px solid currentColor}
+.flag.ok{color:var(--good)} .flag.over{color:var(--warn)}
+details summary{cursor:pointer;font-weight:600}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+label{font-size:12.5px;color:var(--text2);display:flex;flex-direction:column;gap:3px}
+input{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text)}
+button,.btn{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--grid-c);color:#fff;cursor:pointer;text-decoration:none;display:inline-block}
+pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;overflow-x:auto;font-size:12.5px}
+.note{font-size:13px;color:var(--text2)}
+.formula{font-size:13.5px;color:var(--text2);line-height:1.8}
+.formula b{color:var(--text)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Home Solar &amp; TNB Usage Tracker</h1>
+  <p class="sub">Real household usage = what TNB's meter sees <em>plus</em> the solar you used directly, which the bill never shows.</p>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="card">
+    <h2>Where your electricity came from</h2>
+    <div class="note">Actual monthly usage, split into grid import (on the bill) and solar used directly (hidden from the bill).</div>
+    <div class="legend"><span style="--c:var(--grid-c)">From TNB grid</span><span style="--c:var(--solar-c)">Solar used directly</span></div>
+    <div class="chartwrap" id="c1"></div>
+  </div>
+
+  <div class="card">
+    <h2>Grid import vs the 800 kWh limit</h2>
+    <div class="note" id="limitNote"></div>
+    <div class="legend"><span style="--c:var(--grid-c)">Import (kWh)</span><span style="--c:var(--warn)">Limit</span></div>
+    <div class="chartwrap" id="c2"></div>
+  </div>
+
+  <div class="card">
+    <h2>Monthly details</h2>
+    <div class="scroll"><table id="tbl"></table></div>
+    <p class="note">All energy in kWh. Import/export are from the meter section ("Maklumat Meter") on page 3 of the bill: kWh P/O (I) = import peak/off-peak, kWh P/O (E) = export. Solar generated is from the inverter app.</p>
+  </div>
+
+  <div class="card">
+    <h2>How it's calculated</h2>
+    <div class="formula">
+      <b>Solar used directly</b> = Solar generated − Export<br>
+      <b>Actual usage</b> = Import + Solar generated − Export<br>
+      <b>Net billed kWh</b> = Import − Export (NEM credits cover Energy, Capacity &amp; Network charges kWh-for-kWh; AFA, retail, service tax and KWTBB are worked out on full import)<br>
+      <b>Self-use %</b> = Solar used directly ÷ Solar generated &nbsp;·&nbsp; <b>Solar share</b> = Solar generated ÷ Actual usage
+    </div>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>Add a new month</summary>
+      <p class="note">Fill in from the new bill and the solar app. The result appears below; then click "Open data.json on GitHub", paste the line into the <code>months</code> list (add a comma after the previous line) and commit.</p>
+      <form id="f">
+        <label>Month<input name="month" type="month" required></label>
+        <label>Import peak — kWh P (I)<input name="import_peak" type="number" step="any" required></label>
+        <label>Import off-peak — kWh O (I)<input name="import_offpeak" type="number" step="any" required></label>
+        <label>Export peak — kWh P (E)<input name="export_peak" type="number" step="any" required></label>
+        <label>Export off-peak — kWh O (E)<input name="export_offpeak" type="number" step="any" required></label>
+        <label>Solar generated (app)<input name="solar" type="number" step="any" required></label>
+        <label>Bill amount (RM)<input name="bill" type="number" step="any" required></label>
+        <label>Baki NEM (kWh)<input name="nem_balance" type="number" step="any" value="0"></label>
+        <div style="display:flex;align-items:flex-end"><button type="submit">Calculate</button></div>
+      </form>
+      <div id="out"></div>
+    </details>
+  </div>
+</main>
+
+<script>
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const lbl=m=>{const[y,mm]=m.split("-");return MON[+mm-1]+" "+y.slice(2)};
+const f0=n=>Math.round(n).toLocaleString();
+const f1=n=>(Math.round(n*10)/10).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:1});
+const rm=n=>"RM"+n.toFixed(2);
+function calc(m){
+  const imp=m.import_peak+m.import_offpeak, exp=m.export_peak+m.export_offpeak;
+  const direct=m.solar-exp, usage=imp+direct;
+  return {...m,imp,exp,direct,usage,net:imp-exp,selfPct:direct/m.solar*100,share:m.solar/usage*100};
+}
+function ruleFor(month,rules){return (rules||[]).find(r=>month>=r.from&&month<=r.to)}
+const svgNS="http://www.w3.org/2000/svg";
+function el(tag,attrs,parent){const e=document.createElementNS(svgNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent&&parent.appendChild(e);return e}
+function niceMax(v){const p=Math.pow(10,Math.floor(Math.log10(v)));const s=[1,2,2.5,5,10].find(s=>s*p>=v/1)*p;return s}
+function ticks(max){const step=max<=600?100:max<=1500?200:500;const t=[];for(let i=0;i<=max+1e-9;i+=step)t.push(i);return t}
+
+function tipHandlers(wrap,tip){
+  return {show(html,x,y){tip.innerHTML=html;tip.style.display="block";
+      const w=wrap.clientWidth,tw=tip.offsetWidth;let left=x+14;if(left+tw>w)left=x-tw-14;tip.style.left=Math.max(0,left)+"px";tip.style.top=Math.max(0,y-10)+"px"},
+    hide(){tip.style.display="none"}};
+}
+
+function barChart(id,rows,opts){
+  const wrap=document.getElementById(id);wrap.innerHTML="";
+  const W=960,H=300,m={t:12,r:12,b:30,l:46};
+  const iw=W-m.l-m.r,ih=H-m.t-m.b;
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":opts.aria},wrap);
+  const tip=document.createElement("div");tip.className="tip";wrap.appendChild(tip);const T=tipHandlers(wrap,tip);
+  const maxV=Math.max(opts.minMax||0,...rows.map(opts.total));
+  const step=maxV<=600?100:maxV<=1500?200:500;const top=Math.ceil(maxV*1.1/step)*step;
+  const tk=ticks(top),Y=v=>m.t+ih-(v/top)*ih;
+  tk.forEach(t=>{el("line",{x1:m.l,x2:W-m.r,y1:Y(t),y2:Y(t),stroke:"var(--grid)","stroke-width":1},svg);
+    const tx=el("text",{x:m.l-8,y:Y(t)+4,"text-anchor":"end"},svg);tx.textContent=f0(t)});
+  const band=iw/rows.length,bw=Math.min(56,band*0.5);
+  if(opts.limitLine){rows.forEach((r,i)=>{const lim=opts.limitLine(r);if(lim==null)return;const x0=m.l+band*i+band/2-band*0.42,x1=x0+band*0.84;
+    el("line",{x1:x0,x2:x1,y1:Y(lim),y2:Y(lim),stroke:"var(--warn)","stroke-width":2,"stroke-dasharray":"5 4"},svg)})}
+  rows.forEach((r,i)=>{
+    const cx=m.l+band*i+band/2,x=cx-bw/2;let acc=0;
+    const segs=opts.series.map(s=>({s,v:Math.max(0,s.value(r))}));
+    segs.forEach((g,j)=>{
+      const y0=Y(acc),y1=Y(acc+g.v);acc+=g.v;const h=y0-y1-(j<segs.length-1?0:0);
+      const gap=j>0?2:0;const isTop=j===segs.length-1;
+      const hh=Math.max(0,h-gap);
+      if(isTop){const rr=Math.min(4,hh);
+        el("path",{d:`M${x},${y0-gap} V${y1+rr} Q${x},${y1} ${x+rr},${y1} H${x+bw-rr} Q${x+bw},${y1} ${x+bw},${y1+rr} V${y0-gap} Z`,fill:g.s.color},svg)}
+      else el("rect",{x,y:y1,width:bw,height:hh,fill:g.s.color},svg);
+    });
+    if(opts.topLabel){const lim=opts.limitLine?opts.limitLine(r):null;const ty=Math.min(Y(acc),lim!=null?Y(lim):1e9)-6;const t=el("text",{x:cx,y:ty,"text-anchor":"middle",style:"fill:var(--text);font-weight:600"},svg);t.textContent=opts.topLabel(r)}
+    const xl=el("text",{x:cx,y:H-8,"text-anchor":"middle"},svg);xl.textContent=lbl(r.month);
+    const hit=el("rect",{x:m.l+band*i,y:m.t,width:band,height:ih,fill:"transparent"},svg);
+    hit.addEventListener("mousemove",e=>{const b=wrap.getBoundingClientRect();T.show(opts.tip(r),e.clientX-b.left,e.clientY-b.top)});
+    hit.addEventListener("mouseleave",T.hide);
+  });
+}
+
+fetch("data.json?"+Date.now()).then(r=>r.json()).then(data=>{
+  const rows=data.months.slice().sort((a,b)=>a.month.localeCompare(b.month)).map(calc);
+  const rules=data.rules;
+  const last=rows.at(-1),n=rows.length;
+  const sum=k=>rows.reduce((a,r)=>a+r[k],0);
+  const avgUse=sum("usage")/n,avgImp=sum("imp")/n,totalBill=sum("bill");
+  const lr=ruleFor(last.month,rules);
+  document.getElementById("tiles").innerHTML=`
+    <div class="tile"><div class="k">Actual usage · ${lbl(last.month)}</div><div class="v">${f0(last.usage)} kWh</div><div class="d">Bill shows only ${f0(last.imp)} kWh import</div></div>
+    <div class="tile"><div class="k">Average actual usage</div><div class="v">${f0(avgUse)} kWh</div><div class="d">per month, ${n} months</div></div>
+    <div class="tile"><div class="k">Solar share of usage · ${lbl(last.month)}</div><div class="v">${f0(last.share)}%</div><div class="d">${f0(last.selfPct)}% of solar used directly</div></div>
+    <div class="tile"><div class="k">Bill paid · ${lbl(last.month)}</div><div class="v">${rm(last.bill)}</div><div class="d">${rm(totalBill)} total over ${n} months</div></div>
+    <div class="tile"><div class="k">NEM balance left</div><div class="v">${f0(last.nem_balance)} kWh</div><div class="d">Unused credit; balance expires 31 Dec</div></div>`;
+
+  barChart("c1",rows,{aria:"Stacked bars of monthly actual usage: grid import plus solar used directly",
+    total:r=>r.usage,
+    series:[{name:"From TNB grid",color:"var(--grid-c)",value:r=>r.imp},{name:"Solar used directly",color:"var(--solar-c)",value:r=>r.direct}],
+    topLabel:r=>f0(r.usage),
+    tip:r=>`<b>${lbl(r.month)} — ${f0(r.usage)} kWh actual</b><i style="background:var(--grid-c)"></i>From grid: ${f0(r.imp)} kWh<br><i style="background:var(--solar-c)"></i>Solar used directly: ${f1(r.direct)} kWh<br><span style="color:var(--muted)">Solar generated ${f1(r.solar)} · exported ${f0(r.exp)}</span>`});
+
+  const limits=rows.map(r=>ruleFor(r.month,rules)).filter(Boolean);
+  document.getElementById("limitNote").textContent=limits.length?`${limits[0].note} (bills ${lbl(limits[0].from)} to ${lbl(limits[0].to)}). The limit is checked against import, not actual usage.`:"No import limit rule active.";
+  barChart("c2",rows,{aria:"Monthly grid import compared with the 800 kWh limit",
+    total:r=>r.imp,minMax:850,
+    series:[{name:"Import",color:"var(--grid-c)",value:r=>r.imp}],
+    topLabel:r=>f0(r.imp),
+    limitLine:r=>{const x=ruleFor(r.month,rules);return x?x.import_limit:null},
+    tip:r=>{const x=ruleFor(r.month,rules);return `<b>${lbl(r.month)} — import ${f0(r.imp)} kWh</b>Peak ${f0(r.import_peak)} · Off-peak ${f0(r.import_offpeak)}<br>`+(x?(r.imp<=x.import_limit?`Under ${x.import_limit} kWh by ${f0(x.import_limit-r.imp)}`:`Over ${x.import_limit} kWh by ${f0(r.imp-x.import_limit)}`):"No limit rule this month")}});
+
+  const tb=document.getElementById("tbl");
+  tb.innerHTML=`<thead><tr><th>Month</th><th>Import</th><th>Export</th><th>Solar generated</th><th>Solar used directly</th><th>Actual usage</th><th>Self-use %</th><th>Solar share</th><th>NEM balance</th><th>Bill</th><th>800 kWh limit</th></tr></thead><tbody>`+
+    rows.map(r=>{const x=ruleFor(r.month,rules);const flag=x?(r.imp<=x.import_limit?'<span class="flag ok">✓ under</span>':'<span class="flag over">▲ over</span>'):'<span class="note">—</span>';
+      return `<tr><td>${lbl(r.month)}</td><td>${f0(r.imp)}</td><td>${f0(r.exp)}</td><td>${f1(r.solar)}</td><td>${f1(r.direct)}</td><td class="hl">${f1(r.usage)}</td><td>${f0(r.selfPct)}%</td><td>${f0(r.share)}%</td><td>${f0(r.nem_balance)}</td><td>${rm(r.bill)}</td><td>${flag}</td></tr>`}).join("")+"</tbody>";
+}).catch(e=>{document.getElementById("tiles").innerHTML='<div class="tile">Could not load data.json: '+e+'</div>'});
+
+document.getElementById("f").addEventListener("submit",e=>{
+  e.preventDefault();const fd=new FormData(e.target);const o={month:fd.get("month")};
+  ["import_peak","import_offpeak","export_peak","export_offpeak","solar","bill","nem_balance"].forEach(k=>o[k]=+fd.get(k)||0);
+  const r=calc(o);
+  const host=location.hostname,owner=host.endsWith("github.io")?host.split(".")[0]:"YOUR-USERNAME";
+  const repo=location.pathname.split("/").filter(Boolean)[0]||"REPO";
+  const line=JSON.stringify(o).replace(/,"/g,', "').replace(/":/g,'": ');
+  document.getElementById("out").innerHTML=`<p><b>${lbl(o.month)}:</b> actual usage <b>${f1(r.usage)} kWh</b> (import ${f0(r.imp)} + solar used directly ${f1(r.direct)}), self-use ${f0(r.selfPct)}%, solar share ${f0(r.share)}%.</p>
+    <pre id="line">${line}</pre>
+    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('line').textContent);this.textContent='Copied'">Copy line</button>
+    <a class="btn" target="_blank" href="https://github.com/${owner}/${repo}/edit/main/data.json">Open data.json on GitHub</a>`;
+});
+</script>
+</body>
+</html>
