@@ -93,14 +93,6 @@ tbody tr{cursor:pointer}
 <header><img class="logo" src="tesla-icon.svg" alt=""><h1>Tesla Efficiency Log</h1><a class="btn secondary" href="./">Solar</a></header>
 <p class="sub">Trips are stored in your Google Sheet, so every device shows the same data.</p>
 
-<div class="card" id="setup" style="display:none">
-  <h2>Connect your sheet</h2>
-  <p class="hint" style="margin:0 0 10px">Paste the web app link from your Tesla Trip Relay script. It is kept only in this browser. Anyone with the link can read and add trips, so do not share it.</p>
-  <label>Relay link<input id="relay" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec"></label>
-  <button class="btn" id="connect" style="margin-top:10px;width:100%">Connect</button>
-  <p id="smsg" role="alert" style="color:var(--bad)"></p>
-</div>
-
 <div id="app" style="display:none">
 <div class="tiles">
   <div class="tile"><b id="a1">-</b><span>Total distance (km)</span></div>
@@ -144,14 +136,13 @@ tbody tr{cursor:pointer}
   <h2>Trips</h2>
   <div class="scroll tbl" id="list"></div>
   <div class="cards" id="cards"></div>
-  <div class="acts"><button class="btn secondary" id="reload">Refresh</button><button class="btn secondary" id="unlink">Change sheet link</button></div>
+  <div class="acts"><button class="btn secondary" id="reload">Refresh</button></div>
 </div>
 </div>
 </main>
 <script src="portal.js" defer></script>
 <script>
-var LS='teslaRelayUrl',url='';
-try{url=localStorage.getItem(LS)||''}catch(e){}
+var url='https://script.google.com/macros/s/AKfycbz4qt-etrTEQuY-3IPWVLSmfwwHfgIyiNHKTlgTv365oCHYnvmY1to6EU0anp4tfBUn/exec';
 var trips=[],edit=null,pend=null,pt=null,busy=false;
 var ids=['d','f','t','rem','pp','pk','ct','ch','u'];
 function $(i){return document.getElementById(i)}
@@ -255,21 +246,7 @@ $('list').onclick=$('cards').onclick=function(e){
   $('dt').value=r.date||today();
   say('');render();window.scrollTo({top:0,behavior:'smooth'});
 };
-function showApp(){
-  $('setup').style.display=url?'none':'block';
-  $('app').style.display=url?'block':'none';
-}
-$('connect').onclick=function(){
-  var v=$('relay').value.trim();
-  if(v.indexOf('https://script.google.com/macros/s/')!==0||v.slice(-5)!=='/exec'){$('smsg').textContent='That does not look like the web app link. It should start with https://script.google.com/macros/s/ and end with /exec.';return}
-  $('smsg').textContent='';url=v;try{localStorage.setItem(LS,url)}catch(e){}
-  showApp();clearForm();load($('connect'));
-};
-$('unlink').onclick=function(){
-  if($('unlink').textContent!=='Tap again to confirm'){$('unlink').textContent='Tap again to confirm';setTimeout(function(){$('unlink').textContent='Change sheet link'},4000);return}
-  try{localStorage.removeItem(LS)}catch(e){}
-  url='';trips=[];$('unlink').textContent='Change sheet link';$('relay').value='';showApp();
-};
+function showApp(){$('app').style.display='block'}
 showApp();
 if(url){clearForm();load()}
 </script>
