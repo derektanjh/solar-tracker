@@ -1,2 +1,8 @@
 # solar-tracker
-Tracks actual home electricity usage from TNB bills nd NEM solar generation
+
+Tracks actual home electricity usage from TNB bills and NEM solar generation.
+
+Live site: https://jinhong1028.github.io/solar-tracker/
+
+- **Actual usage** = Import + Solar generated − Export
+- Monthly data lives in `data.json` (one line per month). Use "Add a new month" on the site to generate the line, then paste it into `data.json`.
