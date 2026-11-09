@@ -1,11 +1,11 @@
 {
   "months": [
-    {"month": "2026-05", "import_peak": 94,  "import_offpeak": 711, "export_peak": 123, "export_offpeak": 552, "solar": 848.10, "bill": 33.70, "nem_balance": 293},
-    {"month": "2026-06", "import_peak": 99,  "import_offpeak": 695, "export_peak": 131, "export_offpeak": 516, "solar": 787.65, "bill": 42.50, "nem_balance": 146},
-    {"month": "2026-07", "import_peak": 123, "import_offpeak": 602, "export_peak": 163, "export_offpeak": 484, "solar": 771.05, "bill": 45.35, "nem_balance": 68},
-    {"month": "2026-08", "import_peak": 83,  "import_offpeak": 774, "export_peak": 169, "export_offpeak": 553, "solar": 864.05, "bill": 85.55, "nem_balance": 0},
-    {"month": "2026-09", "import_peak": 98,  "import_offpeak": 672, "export_peak": 134, "export_offpeak": 573, "solar": 833.05, "bill": 28.55, "nem_balance": 0},
-    {"month": "2026-10", "import_peak": 116, "import_offpeak": 588, "export_peak": 140, "export_offpeak": 566, "solar": 830.16, "bill": 4.30,  "nem_balance": 2}
+    {"month": "2026-05", "import_peak": 94,  "import_offpeak": 711, "export_peak": 123, "export_offpeak": 552, "solar": 848.10, "bill": 33.70, "nem_balance": 293, "afa": 0.0138},
+    {"month": "2026-06", "import_peak": 99,  "import_offpeak": 695, "export_peak": 131, "export_offpeak": 516, "solar": 787.65, "bill": 42.50, "nem_balance": 146, "afa": 0.0259},
+    {"month": "2026-07", "import_peak": 123, "import_offpeak": 602, "export_peak": 163, "export_offpeak": 484, "solar": 771.05, "bill": 45.35, "nem_balance": 68, "afa": 0.0359},
+    {"month": "2026-08", "import_peak": 83,  "import_offpeak": 774, "export_peak": 169, "export_offpeak": 553, "solar": 864.05, "bill": 85.55, "nem_balance": 0, "afa": 0.038},
+    {"month": "2026-09", "import_peak": 98,  "import_offpeak": 672, "export_peak": 134, "export_offpeak": 573, "solar": 833.05, "bill": 28.55, "nem_balance": 0, "afa": 0.0367},
+    {"month": "2026-10", "import_peak": 116, "import_offpeak": 588, "export_peak": 140, "export_offpeak": 566, "solar": 830.16, "bill": 4.30,  "nem_balance": 2, "afa": 0.0361}
   ],
   "rules": [
     {"from": "2026-09", "to": "2026-12", "import_limit": 800, "note": "Import of 800 kWh or less: no retail charge, no AFA, no 8% service tax"}
