@@ -130,8 +130,23 @@ pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;pad
   .fields{grid-template-columns:1fr 1fr}
 }
 </style>
+<style id="splash-css">#splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,var(--sp1,#1c5cab),var(--sp2,#0d366b));color:#fff;opacity:1;transition:opacity .45s ease,visibility .45s;animation:spfail .01s linear 5s forwards}
+#splash.out{opacity:0;visibility:hidden;pointer-events:none}
+#splash .sp-in{text-align:center;animation:sppop .6s cubic-bezier(.2,.9,.3,1.2) both}
+#splash img{width:104px;height:104px;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+#splash .sp-name{margin-top:16px;font:600 18px/1.3 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.2px}
+#splash .sp-dots{display:flex;gap:7px;justify-content:center;margin-top:18px}
+#splash .sp-dots i{width:8px;height:8px;border-radius:50%;background:#fff;opacity:.35;animation:spdot 1s ease-in-out infinite}
+#splash .sp-dots i:nth-child(2){animation-delay:.15s}
+#splash .sp-dots i:nth-child(3){animation-delay:.3s}
+@keyframes sppop{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:none}}
+@keyframes spdot{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-5px)}}
+@keyframes spfail{to{opacity:0;visibility:hidden;pointer-events:none}}
+@media (prefers-reduced-motion:reduce){#splash .sp-in,#splash .sp-dots i{animation:none}}</style>
+<link rel="stylesheet" href="portal.css">
 </head>
 <body>
+<div id="splash" style="--sp1:#1c5cab;--sp2:#0d366b" role="status" aria-label="Loading"><div class="sp-in"><img src="icon.svg" alt=""><div class="sp-name">Solar Tracker</div><div class="sp-dots"><i></i><i></i><i></i></div></div></div>
 <main>
   <header>
     <img src="icon.svg" alt="">
@@ -139,6 +154,7 @@ pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;pad
     <button class="btn" id="hdrAdd" type="button">+ Add month</button>
   </header>
   <p class="sub">Real household usage = what TNB's meter sees <em>plus</em> the solar you used directly, which the bill never shows.</p>
+  <p class="sub"><a href="tesla.html">Tesla efficiency log &rarr;</a></p>
 
   <div class="tiles" id="tiles"></div>
 
@@ -519,5 +535,6 @@ $("saveBtn").onclick=doSave;
 $("tokSave").onclick=()=>{const v=$("tokIn").value.trim();if(!v)return;if(!store.set(TOKKEY,v)){$("saveErr").textContent="This browser won't store the token (private mode?).";return}$("tokIn").value="";$("connect").style.display="none";doSave()};
 $("copyBtn").onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText($("line").textContent).then(()=>{$("copyBtn").textContent="Copied ✓"})};
 </script>
+<script src="portal.js" defer></script>
 </body>
 </html>
