@@ -60,6 +60,8 @@ h2{font-size:16px;margin:0 0 2px}
 .pmsg{display:none;padding:10px 14px;border-radius:12px;margin-bottom:14px;font-weight:600;font-size:14px;border:1px solid var(--line);background:var(--card)}
 .pmsg.on{display:block}
 .pmsg.ok{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,var(--line))}
+.pmsg.wait{color:var(--c-park);border-color:color-mix(in srgb,var(--c-park) 45%,var(--line))}
+.chip.up{color:var(--c-chg);border-color:color-mix(in srgb,var(--c-chg) 55%,var(--line))}
 .pmsg.err{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
 /* drafts */
 .drafts{border-left:4px solid var(--c-park)}
@@ -207,7 +209,7 @@ footer{max-width:1280px;margin:0 auto;padding:0 16px calc(28px + env(safe-area-i
 </div>
 </div>
 </main>
-<footer><span>Data: your Google Sheet</span><span>·</span><span>Efficiency in km/kWh</span><span>·</span><span>Tesla Efficiency v2</span></footer>
+<footer><span>Data: your Google Sheet</span><span>·</span><span>Efficiency in km/kWh</span><span>·</span><span>Works offline: trips saved without signal upload later</span><span>·</span><span>Tesla Efficiency v2.1</span></footer>
 
 <button class="btn fab" id="fab" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add trip</button>
 
@@ -260,7 +262,7 @@ function e1(v){return v==null?'–':v.toFixed(1)}
 function fdate(s){if(!s)return 'No date';var p=String(s).slice(0,10).split('-');if(p.length<3)return s;return (+p[2])+' '+MON[+p[1]-1]+' '+p[0]}
 function sdate(s){if(!s)return '';var p=String(s).slice(0,10).split('-');return (+p[2])+' '+MON[+p[1]-1]}
 function say(t,ok){var m=$('msg');m.textContent=t||'';m.style.color=ok?'var(--good)':'var(--bad)';if(t){try{m.scrollIntoView({block:'nearest',behavior:'smooth'})}catch(e){}}}
-var pT;function page(t,ok){var m=$('pmsg');clearTimeout(pT);m.textContent=t||'';m.className='pmsg'+(t?' on '+(ok?'ok':'err'):'');if(t&&ok)pT=setTimeout(function(){m.className='pmsg'},5000)}
+var pT;function page(t,ok){var m=$('pmsg');clearTimeout(pT);m.textContent=t||'';m.className='pmsg'+(t?' on '+(ok==='wait'?'wait':ok?'ok':'err'):'');if(t&&ok===true)pT=setTimeout(function(){m.className='pmsg'},5000)}
 var FK='teslaFormBackup';
 function backup(){try{var o={edit:edit,dt:$('dt').value};ids.forEach(function(i){o[i]=$(i).value});localStorage.setItem(FK,JSON.stringify(o))}catch(e){}}
 function unbackup(){try{localStorage.removeItem(FK)}catch(e){}}
@@ -322,16 +324,16 @@ function render(){
   var rows='',cards='',s=sorted().reverse();
   s.forEach(function(r){
     var c=calc(r),dr=r.status==='Draft';
-    rows+='<tr data-row="'+r.row+'"><td class="l">'+fdate(r.date)+(dr?'<span class="chip">Draft</span>':'')+'</td><td>'+n(r.d,1,' km')+'</td><td>'+(r.f!=null||r.t!=null?(r.f!=null?n(r.f,0,'%'):'?')+' → '+(r.t!=null?n(r.t,0,'%'):'?'):'')+'</td><td class="dim">'+n(r.rem,0,' km')+'</td>'+
+    rows+='<tr data-row="'+r.row+'"><td class="l">'+fdate(r.date)+(dr?'<span class="chip">Draft</span>':'')+(r.pending?'<span class="chip up">'+(flushing?'Uploading…':'Not uploaded yet')+'</span>':'')+'</td><td>'+n(r.d,1,' km')+'</td><td>'+(r.f!=null||r.t!=null?(r.f!=null?n(r.f,0,'%'):'?')+' → '+(r.t!=null?n(r.t,0,'%'):'?'):'')+'</td><td class="dim">'+n(r.rem,0,' km')+'</td>'+
       '<td class="sep">'+n(r.ch,2,' kWh')+'</td><td class="dim">'+n(r.ct,0,'%')+'</td><td class="sep">'+n(r.u,2,' kWh')+'</td>'+
       '<td class="sep dim">'+n(r.pp,1,'%')+(r.pk!=null?' / '+n(r.pk,1,' km'):'')+'</td>'+
-      '<td class="sep eff">'+e1(c.c)+'</td><td class="eff">'+e1(c.a)+'</td><td class="eff">'+e1(c.u)+'</td><td><span class="edit-l">'+(dr?'Finish':'Edit')+'</span></td></tr>';
+      '<td class="sep eff">'+e1(c.c)+'</td><td class="eff">'+e1(c.a)+'</td><td class="eff">'+e1(c.u)+'</td><td><span class="edit-l">'+(r.pending?'':dr?'Finish':'Edit')+'</span></td></tr>';
     var meta=[];
     if(r.ch!=null)meta.push('Charged '+n(r.ch,2,' kWh')+(r.ct!=null?' to '+n(r.ct,0,'%'):''));
     if(r.u!=null)meta.push('Tesla used '+n(r.u,2,' kWh'));
     if(r.rem!=null)meta.push('Range left '+n(r.rem,0,' km'));
     if(r.pp!=null||r.pk!=null)meta.push('Lost while parked '+(r.pp!=null?n(r.pp,1,'%'):'')+(r.pk!=null?' ('+n(r.pk,1,' km')+')':''));
-    cards+='<div class="trip" data-row="'+r.row+'"><div class="t-head"><span class="t-date">'+fdate(r.date)+'</span>'+(dr?'<span class="chip">Draft</span>':'')+'<span class="edit-l">'+(dr?'Finish':'Edit')+'</span></div><div class="t-main"><b>'+(r.d!=null?n(r.d,1,' km'):'–')+'</b><span>Battery '+(r.f!=null?n(r.f,0,'%'):'?')+' → '+(r.t!=null?n(r.t,0,'%'):'?')+'</span></div><div class="t-eff"><div><b>'+e1(c.c)+'</b><span>At charger</span></div><div><b>'+e1(c.a)+'</b><span>Adjusted</span></div><div><b>'+e1(c.u)+'</b><span>Tesla</span></div></div>'+(meta.length?'<div class="t-meta">'+meta.join(' · ')+'</div>':'')+'</div>';
+    cards+='<div class="trip" data-row="'+r.row+'"><div class="t-head"><span class="t-date">'+fdate(r.date)+'</span>'+(dr?'<span class="chip">Draft</span>':'')+(r.pending?'<span class="chip up">'+(flushing?'Uploading…':'Not uploaded')+'</span>':'<span class="edit-l">'+(dr?'Finish':'Edit')+'</span>')+'</div><div class="t-main"><b>'+(r.d!=null?n(r.d,1,' km'):'–')+'</b><span>Battery '+(r.f!=null?n(r.f,0,'%'):'?')+' → '+(r.t!=null?n(r.t,0,'%'):'?')+'</span></div><div class="t-eff"><div><b>'+e1(c.c)+'</b><span>At charger</span></div><div><b>'+e1(c.a)+'</b><span>Adjusted</span></div><div><b>'+e1(c.u)+'</b><span>Tesla</span></div></div>'+(meta.length?'<div class="t-meta">'+meta.join(' · ')+'</div>':'')+'</div>';
   });
   var none=!loaded?'<p class="empty"><span class="spin"></span>Loading trips…</p>':failed?'<p class="empty">Could not load trips. Tap Refresh to try again.</p>':'<p class="empty">No trips yet. Tap Add trip to log your first one.</p>';
   var head='<thead><tr class="grp"><th colspan="4" style="--c:var(--c-trip)">Trip</th><th colspan="2" class="sep" style="--c:var(--c-chg)">Charging</th><th class="sep" style="--c:var(--c-tsl)">Tesla</th><th class="sep" style="--c:var(--c-park)">Parked</th><th colspan="3" class="sep" style="--c:var(--c-eff)">Efficiency (km/kWh)</th><th class="gap"></th></tr>'+
@@ -344,7 +346,8 @@ function render(){
   [['a1',S.td.toFixed(1)+' <small>km</small>'],['a2',S.c!=null?S.c.toFixed(1)+U:'–'],['a3',S.a!=null?S.a.toFixed(1)+U:'–'],['a4',S.u!=null?S.u.toFixed(1)+U:'–']].forEach(function(x){var b=$(x[0]);b.classList.toggle('skel',!loaded);b.innerHTML=!loaded?'0.0 <small>km</small>':(failed&&!trips.length)?'–':x[1]});
   $('a1d').textContent=loaded&&!failed?S.nc+(S.nc===1?' completed trip':' completed trips'):'Completed trips';
   var last=sorted().filter(function(r){return r.status==='Complete'}).pop();
-  $('meta').textContent=!loaded?'Connecting to Google Sheet…':failed?'Google Sheet not reachable':'Synced with Google Sheet · '+S.nc+(S.nc===1?' trip':' trips')+(last?' · last trip '+fdate(last.date):'');
+  var q=outbox.length?(flushing?'Uploading '+outbox.length+(outbox.length===1?' change…':' changes…'):'⏳ '+outbox.length+(outbox.length===1?' change':' changes')+' waiting to upload'):'';
+  $('meta').textContent=!loaded?'Connecting to Google Sheet…':failed?'Google Sheet not reachable':q?q+' · '+S.nc+(S.nc===1?' trip':' trips'):offline?'Offline · saved copy from '+ftime(cachedAt):'Synced with Google Sheet · '+S.nc+(S.nc===1?' trip':' trips')+(last?' · last trip '+fdate(last.date):'');
   var er=edit!=null?trips.filter(function(t){return t.row===edit})[0]:null;
   $('formtitle').textContent=er?(er.status==='Draft'?'Finish draft':'Edit trip'):'New trip';
   $('save').textContent=er?(er.status==='Draft'?'Save as complete trip':'Update trip'):'Save trip';
@@ -353,6 +356,67 @@ function render(){
   $('delrow').style.display=er?'':'none';
   trend();
 }
+
+/* ---------- saved copy + offline outbox ---------- */
+var CK='teslaTripsCache',OK='teslaOutbox',serverTrips=[],outbox=[],cachedAt=null,offline=false,flushing=false;
+function sget(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}}
+function sset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function ftime(ts){var d=new Date(ts),h=d.getHours(),m=d.getMinutes();return d.getDate()+' '+MON[d.getMonth()]+', '+((h%12)||12)+':'+(m<10?'0':'')+m+(h<12?' am':' pm')}
+var FIELDS=['date','d','f','t','rem','pp','pk','ct','ch','u','status'];
+function nv(k,v){return v==null||v===''?'':k==='date'?String(v).slice(0,10):k==='status'?String(v):String(Number(v))}
+function match(a,b){if(!a||!b)return false;for(var i=0;i<FIELDS.length;i++){var k=FIELDS[i];if(nv(k,a[k])!==nv(k,b[k]))return false}return true}
+function strip(t){var o={};FIELDS.forEach(function(k){o[k]=t[k]==null?null:t[k]});return o}
+function findIdx(list,op){var i;for(i=0;i<list.length;i++)if(list[i].row===op.row&&match(list[i],op.ref))return i;for(i=0;i<list.length;i++)if(match(list[i],op.ref))return i;return -1}
+function applyOutbox(base){
+  var t=base.map(function(o){return Object.assign({},o)});
+  outbox.forEach(function(op){
+    if(op.action==='delete'){var i=findIdx(t,op);if(i>-1)t.splice(i,1);return}
+    if(op.ref==null){t.push(Object.assign({},op.trip,{row:'p'+op.id,pending:true}));return}
+    var j=findIdx(t,op);if(j>-1)t[j]=Object.assign({},op.trip,{row:t[j].row,pending:true});
+  });
+  return t;
+}
+function rebuild(){trips=applyOutbox(serverTrips);render()}
+function saveCache(){cachedAt=Date.now();sset(CK,{at:cachedAt,trips:serverTrips})}
+/* turn a queued change into a request against the sheet as it is now (rows can move) */
+function prep(op){
+  if(op.action==='save'&&op.ref==null){if(op.maybe&&serverTrips.some(function(t){return match(t,op.trip)}))return null;return {action:'save',row:null,trip:op.trip}}
+  if(op.maybe&&op.action==='save'&&serverTrips.some(function(t){return match(t,op.trip)}))return null;
+  var i=findIdx(serverTrips,op);if(i<0)return null;
+  return op.action==='delete'?{action:'delete',row:serverTrips[i].row}:{action:'save',row:serverTrips[i].row,trip:op.trip};
+}
+function enqueue(op){op.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);outbox.push(op);sset(OK,outbox);rebuild();return flush(op)}
+function flush(mine){
+  if(flushing||!outbox.length)return Promise.resolve();
+  if(busy){setTimeout(function(){flush(mine)},800);return Promise.resolve()}
+  flushing=true;render();
+  var step=function(){
+    if(!outbox.length)return Promise.resolve();
+    var op=outbox[0],body=prep(op);
+    if(body===null){outbox.shift();sset(OK,outbox);return step()}
+    return call({method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},null).then(function(){outbox.shift();sset(OK,outbox);return step()});
+  };
+  var pre=outbox.some(function(o){return o.maybe})?call(undefined,null):Promise.resolve();
+  return pre.then(step).then(function(){
+    flushing=false;offline=false;loaded=true;failed=false;rebuild();
+    page(mine?mine.msg:'All changes uploaded to your Google Sheet.',true);
+  },function(e){
+    flushing=false;
+    if(e&&e.net){
+      if(e.maybe&&outbox[0])outbox[0].maybe=true;sset(OK,outbox);offline=true;rebuild();
+      page((mine?'Saved on this device. ':'')+'The line is '+(e.message==='no connection'?'down':'too slow')+' right now, so '+(outbox.length===1?'1 change is':outbox.length+' changes are')+' waiting to upload. It will upload by itself when the line is back.','wait');
+      return;
+    }
+    var op=outbox.shift();sset(OK,outbox);rebuild();
+    if(op&&op.action==='save'){
+      edit=op.ref?op.row:null;ids.forEach(function(i){$(i).value=op.trip[i]==null?'':op.trip[i]});$('dt').value=op.trip.date||today();backup();render();openPanel();
+      say('Not saved: '+(e&&e.message)+'. Your entries are back in the form.');
+    }else page('Could not delete the trip: '+(e&&e.message),false);
+  });
+}
+setInterval(function(){if(outbox.length&&!flushing&&!busy)flush()},20000);
+addEventListener('online',function(){load().then(function(){flush()})});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState!=='visible')return;if(outbox.length)flush();else if(!busy&&(!cachedAt||Date.now()-cachedAt>60000))load()});
 
 /* ---------- panel ---------- */
 function openPanel(){$('ov').classList.add('open');$('ov').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
@@ -369,20 +433,28 @@ function clearForm(){
   ids.forEach(function(i){$(i).value=i==='ct'?80:''});
   $('dt').value=today();edit=null;render();prefill();
 }
-function setBusy(on,btn){$('save').disabled=on;$('draft').disabled=on;$('delBtn').disabled=on;if(btn)btn.classList.toggle('loading',on)}
+function setBusy(on,btn){if(btn)btn.classList.toggle('loading',on)}
 function call(opts,btn){
   if(busy)return Promise.reject(new Error('Still working, try again in a moment'));
   busy=true;setBusy(true,btn);
-  var ctl=new AbortController(),to=setTimeout(function(){ctl.abort()},40000);
-  return fetch(url,Object.assign({signal:ctl.signal},opts||{})).then(function(r){clearTimeout(to);return r.json()}).then(function(j){
+  var post=opts&&opts.method==='POST',ctl=new AbortController(),to=setTimeout(function(){ctl.abort()},post?30000:25000);
+  return fetch(url,Object.assign({signal:ctl.signal},opts||{})).then(function(r){return r.json()}).then(function(j){
+    clearTimeout(to);
     if(!j.ok)throw new Error(j.error||'The sheet reported an error');
-    trips=j.trips;
-  }).then(function(){busy=false;setBusy(false,btn)},function(e){clearTimeout(to);busy=false;setBusy(false,btn);throw (e&&e.name==='AbortError')?new Error('the sheet took too long to answer. Your entries are still in the form, tap again'):e});
+    serverTrips=j.trips;saveCache();
+  }).then(function(){busy=false;setBusy(false,btn)},function(e){
+    clearTimeout(to);busy=false;setBusy(false,btn);
+    if(e&&(e.name==='AbortError'||e.name==='TypeError'||e.name==='SyntaxError')){var x=new Error(e.name==='TypeError'?'no connection':'too slow');x.net=true;x.maybe=post&&e.name!=='TypeError';throw x}
+    throw e;
+  });
 }
-function post(body,btn){return call({method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},btn)}
 function load(btn){
-  page('');
-  return call(undefined,btn).then(function(){loaded=true;failed=false;render();prefill()}).catch(function(e){loaded=true;failed=true;render();page('Could not reach the Google Sheet: '+e.message)});
+  if(busy||flushing)return Promise.resolve();
+  return call(undefined,btn).then(function(){loaded=true;failed=false;offline=false;rebuild();prefill();if(btn)page('Up to date with your Google Sheet.',true)}).catch(function(e){
+    loaded=true;
+    if(cachedAt){offline=true;failed=false;rebuild();page('Can\'t reach the Google Sheet right now (line '+(e.message==='no connection'?'down':'slow')+'). Showing your saved copy from '+ftime(cachedAt)+'. You can still add trips; they will upload when the line is back.','wait')}
+    else{failed=true;rebuild();page('Could not reach the Google Sheet: '+e.message+'. Tap Refresh to try again.',false)}
+  });
 }
 function collect(){var t={date:$('dt').value||null};ids.forEach(function(i){t[i]=num(i)});return t}
 function doSave(draft){
@@ -394,8 +466,9 @@ function doSave(draft){
     if(t.ct<=t.t){say('"Charged up to" must be higher than battery at end.');return}
   }else if(t.d==null&&t.f==null&&t.t==null&&t.pk==null&&t.rem==null){say('Enter at least one figure to save a draft.');return}
   t.status=draft?'Draft':'Complete';
-  var wasEdit=edit!=null;say('');
-  post({action:'save',row:edit,trip:t},draft?$('draft'):$('save')).then(function(){clearForm();closePanel();page(draft?'Draft saved. Finish it any time from the top of the page.':(wasEdit?'Trip updated.':'Trip saved.'),true)}).catch(function(e){say('Not saved: '+e.message)});
+  var er=edit!=null?trips.filter(function(x){return x.row===edit})[0]:null;
+  var op={action:'save',row:er?er.row:null,ref:er?strip(er):null,trip:t,msg:draft?'Draft saved. Finish it any time from the top of the page.':(er?'Trip updated.':'Trip saved.')};
+  clearForm();closePanel();enqueue(op);
 }
 $('save').onclick=function(){doSave(false)};
 $('draft').onclick=function(){doSave(true)};
@@ -404,22 +477,32 @@ $('cancel').onclick=function(){var b=$('cancel');if(b.textContent!=='Discard cha
 var dT;
 $('delBtn').onclick=function(){var b=$('delBtn');
   if(!b.classList.contains('sure')){b.classList.add('sure');b.textContent='Tap again to delete';clearTimeout(dT);dT=setTimeout(function(){b.classList.remove('sure');b.textContent='Delete this trip'},4000);return}
-  clearTimeout(dT);var row=edit;
-  post({action:'delete',row:row},b).then(function(){b.classList.remove('sure');b.textContent='Delete this trip';clearForm();closePanel();page('Trip deleted.',true)}).catch(function(x){b.classList.remove('sure');b.textContent='Delete this trip';say('Not deleted: '+x.message)});
+  clearTimeout(dT);b.classList.remove('sure');b.textContent='Delete this trip';
+  var er=trips.filter(function(x){return x.row===edit})[0];if(!er)return;
+  clearForm();closePanel();enqueue({action:'delete',row:er.row,ref:strip(er),msg:'Trip deleted.'});
 };
-$('reload').onclick=function(){load($('reload'))};
+$('reload').onclick=function(){if(outbox.length)flush();else load($('reload'))};
 $('list').onclick=$('cards').onclick=$('drafts').onclick=function(e){
   var tr=e.target.closest('[data-row]');if(!tr)return;
-  var row2=Number(tr.getAttribute('data-row')),r=trips.filter(function(t){return t.row===row2})[0];
+  var key=tr.getAttribute('data-row'),r=trips.filter(function(t){return String(t.row)===key})[0];
   if(!r)return;
-  edit=row2;
+  if(r.pending){page('This trip is still waiting to upload. You can edit it once it has synced.','wait');return}
+  edit=r.row;
   ids.forEach(function(i){$(i).value=r[i]==null?'':r[i]});
   $('dt').value=r.date?String(r.date).slice(0,10):today();
   say('');render();openPanel();
 };
 var rt;addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if(loaded)trend()},150)});
 $('app').style.display='block';
-if(url){var savedForm=null;try{savedForm=localStorage.getItem(FK)}catch(e){}clearForm();if(restore(savedForm)){render();backup();openPanel();say('Restored the entries you had not saved yet.',true)}load()}
+(function start(){
+  var C=sget(CK);outbox=sget(OK)||[];
+  if(C&&C.trips){serverTrips=C.trips;cachedAt=C.at;loaded=true}
+  var savedForm=null;try{savedForm=localStorage.getItem(FK)}catch(e){}
+  clearForm();rebuild();
+  if(loaded&&window.portalReady)window.portalReady();
+  if(restore(savedForm)){render();backup();openPanel();say('Restored the entries you had not saved yet.',true)}
+  load().then(function(){if(outbox.length)flush()});
+})();
 </script>
 </body>
 </html>
