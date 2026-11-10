@@ -98,13 +98,13 @@ tbody tr{cursor:pointer}
 <p class="sub">Trips are stored in your Google Sheet, so every device shows the same data.</p>
 
 <div id="app" style="display:none">
+<div id="drafts"></div>
 <div class="tiles">
   <div class="tile"><b id="a1">-</b><span>Total distance (km)</span></div>
   <div class="tile"><b id="a2">-</b><span>Avg km/kWh charged</span></div>
   <div class="tile"><b id="a3">-</b><span>Avg km/kWh Tesla</span></div>
 </div>
 
-<div id="drafts"></div>
 <div class="card">
   <h2 id="formtitle">New trip</h2>
   <div class="formgrid">
@@ -230,7 +230,7 @@ function collect(){var t={date:$('dt').value||null};ids.forEach(function(i){t[i]
 function doSave(draft){
   var t=collect();
   if(!draft){
-    var req=[['dt','the date'],['d','the distance'],['f','From %'],['t','To %'],['ch','the power charged'],['ct','Charged up to %'],['u','the power used']];
+    var req=[['date','the date'],['d','the distance'],['f','From %'],['t','To %'],['ch','the power charged'],['ct','Charged up to %'],['u','the power used']];
     for(var q=0;q<req.length;q++){if(t[req[q][0]]==null){say('Enter '+req[q][1]+'.');return}}
     if(t.f<=t.t){say('From % must be higher than To %.');return}
     if(t.ct<=t.t){say('Charged up to % must be higher than To %.');return}
