@@ -85,7 +85,7 @@ tbody tr{cursor:pointer}
 .t-meta{font-size:12.5px;color:var(--muted);margin-top:8px}
 .del{font:inherit;background:none;border:1px solid var(--line);color:var(--bad);border-radius:8px;min-width:44px;min-height:36px;cursor:pointer;position:relative}
 .del.sure{background:var(--bad);color:#fff;border-color:var(--bad)}
-.empty{color:var(--muted);margin:0}
+.empty{color:var(--muted);margin:0}.tile b.skel{color:transparent;width:60%;border-radius:6px;background:linear-gradient(90deg,var(--soft) 25%,var(--line) 50%,var(--soft) 75%);background-size:200% 100%;animation:shim 1.2s linear infinite}@keyframes shim{to{background-position:-200% 0}}.spin{display:inline-block;width:14px;height:14px;margin-right:8px;vertical-align:-2px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:pspin .7s linear infinite}
 .acts{display:flex;justify-content:space-between;gap:8px;margin-top:12px;flex-wrap:wrap}
 @media (max-width:759px){.tbl{display:none}.cards{display:grid;gap:10px}.tiles{gap:8px}.tile{padding:10px}.tile b{font-size:20px}.tile span{font-size:11.5px}header h1{font-size:19px}.card{padding:14px}}
 </style>
@@ -146,7 +146,7 @@ tbody tr{cursor:pointer}
 <script src="portal.js" defer></script>
 <script>
 var url='https://script.google.com/macros/s/AKfycbz4qt-etrTEQuY-3IPWVLSmfwwHfgIyiNHKTlgTv365oCHYnvmY1to6EU0anp4tfBUn/exec';
-var trips=[],edit=null,pend=null,pt=null,busy=false;
+var trips=[],edit=null,pend=null,pt=null,busy=false,loaded=false,failed=false;
 var ids=['d','f','t','rem','pp','pk','ct','ch','u'];
 function $(i){return document.getElementById(i)}
 function num(i){var v=parseFloat($(i).value);return isNaN(v)?null:v}
@@ -187,9 +187,10 @@ function render(){
     if(r.pp!=null||r.pk!=null)meta.push('Parked '+(r.pp!=null?n(r.pp,1,'%'):'')+(r.pk!=null?' ('+n(r.pk,1,' km')+')':''));
     cards+='<div class="trip" data-row="'+r.row+'"><div class="t-head"><span class="t-date">'+(r.date||'No date')+'</span>'+(dr?'<span class="chip">Draft</span>':'')+del+'</div><div class="t-main"><b>'+n(r.d,1,' km')+'</b><span>'+(r.f!=null?n(r.f,0,'%'):'?')+' → '+(r.t!=null?n(r.t,0,'%'):'?')+'</span></div><div class="t-eff"><div><b>'+e1(c.c)+'</b><span>Charged</span></div><div><b>'+e1(c.a)+'</b><span>Adjusted</span></div><div><b>'+e1(c.u)+'</b><span>Tesla</span></div></div>'+(meta.length?'<div class="t-meta">'+meta.join(' · ')+'</div>':'')+'</div>';
   });
-  $('list').innerHTML=s.length?'<table><thead><tr><th class="g">Date</th><th class="g">Distance</th><th class="g">From</th><th class="g">To</th><th class="g">Remaining</th><th class="y">Park %</th><th class="y">Park dist.</th><th class="b">Up to</th><th class="b">Power charged</th><th>Eff. charged</th><th>Eff. adjusted</th><th class="r">Power used</th><th>Eff. Tesla</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>':'<p class="empty">No trips yet. Fill in the form above and tap Save trip.</p>';
-  $('cards').innerHTML=s.length?cards:'';
-  var S=stats();$('a1').textContent=S.td;$('a2').textContent=S.c;$('a3').textContent=S.u;
+  var none=!loaded?'<p class="empty"><span class="spin"></span>Loading trips…</p>':failed?'<p class="empty">Could not load trips. Tap Refresh to try again.</p>':'<p class="empty">No trips yet. Fill in the form above and tap Save trip.</p>';
+  $('list').innerHTML=s.length?'<table><thead><tr><th class="g">Date</th><th class="g">Distance</th><th class="g">From</th><th class="g">To</th><th class="g">Remaining</th><th class="y">Park %</th><th class="y">Park dist.</th><th class="b">Up to</th><th class="b">Power charged</th><th>Eff. charged</th><th>Eff. adjusted</th><th class="r">Power used</th><th>Eff. Tesla</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>':none;
+  $('cards').innerHTML=s.length?cards:none;
+  var S=stats();['a1','a2','a3'].forEach(function(k,i){var b=$(k);b.classList.toggle('skel',!loaded);b.textContent=!loaded?'0.0':(failed&&!trips.length)?'-':[S.td,S.c,S.u][i]});
   var er=edit!=null?trips.filter(function(t){return t.row===edit})[0]:null;
   $('formtitle').textContent=er?'Edit trip':'New trip';
   $('save').textContent=er?'Update trip':'Save trip';
@@ -212,7 +213,7 @@ function call(opts,btn){
 function post(body,btn){return call({method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},btn)}
 function load(btn){
   say('');
-  return call(undefined,btn).then(function(){render();prefill()}).catch(function(e){say('Could not reach the sheet: '+e.message)});
+  return call(undefined,btn).then(function(){loaded=true;failed=false;render();prefill()}).catch(function(e){loaded=true;failed=true;render();say('Could not reach the sheet: '+e.message)});
 }
 function collect(){var t={date:$('dt').value||null};ids.forEach(function(i){t[i]=num(i)});return t}
 function doSave(draft){
