@@ -31,5 +31,7 @@
     show();
   },true);
   w.addEventListener('pageshow',function(e){if(e.persisted){var s=d.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s)}});
+  w.portalReady=function(){hide()};
+  if('serviceWorker' in navigator&&location.protocol==='https:'){w.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
   w.portalBusy=function(p){pend++;updBar();var done=function(){pend=Math.max(0,pend-1);updBar()};Promise.resolve(p).then(done,done);return p};
 })();
