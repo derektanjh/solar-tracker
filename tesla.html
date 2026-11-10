@@ -85,7 +85,8 @@ tbody tr{cursor:pointer}
 .t-meta{font-size:12.5px;color:var(--muted);margin-top:8px}
 .del{font:inherit;background:none;border:1px solid var(--line);color:var(--bad);border-radius:8px;min-width:44px;min-height:36px;cursor:pointer;position:relative}
 .del.sure{background:var(--bad);color:#fff;border-color:var(--bad)}
-.empty{color:var(--muted);margin:0}.tile b.skel{color:transparent;width:60%;border-radius:6px;background:linear-gradient(90deg,var(--soft) 25%,var(--line) 50%,var(--soft) 75%);background-size:200% 100%;animation:shim 1.2s linear infinite}@keyframes shim{to{background-position:-200% 0}}.spin{display:inline-block;width:14px;height:14px;margin-right:8px;vertical-align:-2px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:pspin .7s linear infinite}
+.empty{color:var(--muted);margin:0}
+#msg:not(:empty){padding:10px 12px;border-radius:10px;background:var(--soft);font-weight:600}.tile b.skel{color:transparent;width:60%;border-radius:6px;background:linear-gradient(90deg,var(--soft) 25%,var(--line) 50%,var(--soft) 75%);background-size:200% 100%;animation:shim 1.2s linear infinite}@keyframes shim{to{background-position:-200% 0}}.spin{display:inline-block;width:14px;height:14px;margin-right:8px;vertical-align:-2px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:pspin .7s linear infinite}
 .acts{display:flex;justify-content:space-between;gap:8px;margin-top:12px;flex-wrap:wrap}
 @media (max-width:759px){.tbl{display:none}.cards{display:grid;gap:10px}.tiles{gap:8px}.tile{padding:10px}.tile b{font-size:20px}.tile span{font-size:11.5px}header h1{font-size:19px}.card{padding:14px}}
 </style>
@@ -103,6 +104,7 @@ tbody tr{cursor:pointer}
   <div class="tile"><b id="a3">-</b><span>Avg km/kWh Tesla</span></div>
 </div>
 
+<div id="drafts"></div>
 <div class="card">
   <h2 id="formtitle">New trip</h2>
   <div class="formgrid">
@@ -126,14 +128,14 @@ tbody tr{cursor:pointer}
     </div>
     <p class="hint">Stopped at a different % than usual? Change "Charged up to". The adjusted efficiency still works.</p></div>
   </div>
+  <p id="msg" role="alert"></p>
   <div class="actions">
     <button class="btn" id="save">Save trip</button>
     <button class="btn secondary" id="draft">Save as draft</button>
     <button class="btn secondary" id="cancel" style="display:none">Cancel edit</button>
   </div>
   <p class="hint">Fields marked * are required to save a trip. Use Save as draft to keep what you have and finish later.</p>
-  <p id="msg" role="alert"></p>
-</div>
+  </div>
 
 <div class="card">
   <h2>Trips</h2>
@@ -152,7 +154,12 @@ function $(i){return document.getElementById(i)}
 function num(i){var v=parseFloat($(i).value);return isNaN(v)?null:v}
 function n(v,dp,u){return v==null?'':Number(v).toFixed(dp)+(u||'')}
 function e1(v){return v==null?'-':v.toFixed(1)}
-function say(t,ok){var m=$('msg');m.textContent=t||'';m.style.color=ok?'var(--good)':'var(--bad)'}
+function say(t,ok){var m=$('msg');m.textContent=t||'';m.style.color=ok?'var(--good)':'var(--bad)';if(t){try{m.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}}}
+var FK='teslaFormBackup';
+function backup(){try{var o={edit:edit,dt:$('dt').value};ids.forEach(function(i){o[i]=$(i).value});localStorage.setItem(FK,JSON.stringify(o))}catch(e){}}
+function unbackup(){try{localStorage.removeItem(FK)}catch(e){}}
+function restore(s){try{var o=JSON.parse(s||'null');if(!o)return false;var any=false;ids.forEach(function(i){if(i!=='ct'&&o[i]!==''&&o[i]!=null)any=true});if(!any)return false;edit=o.edit;ids.forEach(function(i){$(i).value=o[i]==null?'':o[i]});$('dt').value=o.dt||today();return true}catch(e){return false}}
+document.addEventListener('input',function(e){if(e.target.closest&&e.target.closest('.formgrid'))backup()});
 function today(){var d=new Date(),p=function(x){return (x<10?'0':'')+x};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
 function calc(r){
   var o={c:null,a:null,u:null};
@@ -190,6 +197,8 @@ function render(){
   var none=!loaded?'<p class="empty"><span class="spin"></span>Loading trips…</p>':failed?'<p class="empty">Could not load trips. Tap Refresh to try again.</p>':'<p class="empty">No trips yet. Fill in the form above and tap Save trip.</p>';
   $('list').innerHTML=s.length?'<table><thead><tr><th class="g">Date</th><th class="g">Distance</th><th class="g">From</th><th class="g">To</th><th class="g">Remaining</th><th class="y">Park %</th><th class="y">Park dist.</th><th class="b">Up to</th><th class="b">Power charged</th><th>Eff. charged</th><th>Eff. adjusted</th><th class="r">Power used</th><th>Eff. Tesla</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>':none;
   $('cards').innerHTML=s.length?cards:none;
+  var dl=s.filter(function(r){return r.status==='Draft'});
+  $('drafts').innerHTML=dl.length?'<div class="card" style="background:var(--y)"><h2>Drafts to finish</h2>'+dl.map(function(r){return '<button class="btn secondary" style="width:100%;margin-top:6px;justify-content:space-between" data-row="'+r.row+'"><span>'+(r.date||'')+' \u00b7 '+n(r.d,1,' km')+'</span><span>Resume</span></button>'}).join('')+'</div>':'';
   var S=stats();['a1','a2','a3'].forEach(function(k,i){var b=$(k);b.classList.toggle('skel',!loaded);b.textContent=!loaded?'0.0':(failed&&!trips.length)?'-':[S.td,S.c,S.u][i]});
   var er=edit!=null?trips.filter(function(t){return t.row===edit})[0]:null;
   $('formtitle').textContent=er?'Edit trip':'New trip';
@@ -198,6 +207,7 @@ function render(){
   $('cancel').style.display=er?'':'none';
 }
 function clearForm(){
+  unbackup();
   ids.forEach(function(i){$(i).value=i==='ct'?80:''});
   $('dt').value=today();edit=null;render();prefill();
 }
@@ -205,10 +215,11 @@ function setBusy(on,btn){$('save').disabled=on;$('draft').disabled=on;if(btn)btn
 function call(opts,btn){
   if(busy)return Promise.reject(new Error('Still working, try again in a moment'));
   busy=true;setBusy(true,btn);
-  return fetch(url,opts).then(function(r){return r.json()}).then(function(j){
+  var ctl=new AbortController(),to=setTimeout(function(){ctl.abort()},40000);
+  return fetch(url,Object.assign({signal:ctl.signal},opts||{})).then(function(r){clearTimeout(to);return r.json()}).then(function(j){
     if(!j.ok)throw new Error(j.error||'The sheet reported an error');
     trips=j.trips;
-  }).then(function(){busy=false;setBusy(false,btn)},function(e){busy=false;setBusy(false,btn);throw e});
+  }).then(function(){busy=false;setBusy(false,btn)},function(e){clearTimeout(to);busy=false;setBusy(false,btn);throw (e&&e.name==='AbortError')?new Error('the sheet took too long to answer. Your entries are still in the form, tap again'):e});
 }
 function post(body,btn){return call({method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)},btn)}
 function load(btn){
@@ -230,9 +241,10 @@ function doSave(draft){
 }
 $('save').onclick=function(){doSave(false)};
 $('draft').onclick=function(){doSave(true)};
-$('cancel').onclick=function(){say('');clearForm()};
+var cT;
+$('cancel').onclick=function(){var b=$('cancel');if(b.textContent!=='Discard changes? Tap again'){b.textContent='Discard changes? Tap again';clearTimeout(cT);cT=setTimeout(function(){b.textContent='Cancel edit'},4000);return}b.textContent='Cancel edit';clearForm();say('Form cleared. Saved trips and drafts stay in your sheet.',true)};
 $('reload').onclick=function(){load($('reload'))};
-$('list').onclick=$('cards').onclick=function(e){
+$('list').onclick=$('cards').onclick=$('drafts').onclick=function(e){
   var b=e.target.closest('button[data-del]');
   if(b){
     var row=Number(b.getAttribute('data-del'));
@@ -252,7 +264,7 @@ $('list').onclick=$('cards').onclick=function(e){
 };
 function showApp(){$('app').style.display='block'}
 showApp();
-if(url){clearForm();load()}
+if(url){var savedForm=null;try{savedForm=localStorage.getItem(FK)}catch(e){}clearForm();if(restore(savedForm)){render();backup();say('Restored the entries you had not saved yet.',true)}load()}
 </script>
 </body>
 </html>
