@@ -34,10 +34,10 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--surface);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-main{max-width:1040px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+main{max-width:1280px;margin:0 auto;padding:18px calc(16px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
 header{display:flex;align-items:center;gap:12px;margin-bottom:6px}
 header .logo{width:42px;height:42px;border-radius:10px;flex:none}
-header h1{flex:1;font-size:22px;line-height:1.2;margin:0}
+header h1{flex:1;font-size:22px;line-height:1.2;margin:0}/* full-width top bar */header.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;margin:0;background:color-mix(in srgb,var(--card) 88%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(10px);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) 10px calc(24px + env(safe-area-inset-left))}@media (max-width:640px){header.topbar{padding-left:calc(16px + env(safe-area-inset-left));padding-right:calc(16px + env(safe-area-inset-right))}}
 .btn{font:inherit;font-weight:600;padding:10px 16px;border-radius:12px;border:1px solid transparent;background:var(--accent);color:var(--accent-ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;transition:transform .08s,opacity .2s}
 .btn.secondary{background:var(--soft);color:var(--text);border-color:var(--line)}
 .btn:disabled{opacity:.55;cursor:default}
@@ -92,8 +92,8 @@ tbody tr{cursor:pointer}
 </head>
 <body>
 <div id="splash" style="--sp1:#12a07c;--sp2:#07493b" role="status" aria-label="Loading"><div class="sp-in"><img src="tesla-icon.svg" alt=""><div class="sp-name">Tesla Efficiency Log</div><div class="sp-dots"><i></i><i></i><i></i></div></div></div>
+<header class="topbar"><img class="logo" src="tesla-icon.svg" alt=""><h1>Tesla Efficiency Log</h1></header>
 <main>
-<header><img class="logo" src="tesla-icon.svg" alt=""><h1>Tesla Efficiency Log</h1></header>
 <p class="sub">Trips are stored in your Google Sheet, so every device shows the same data.</p>
 
 <div id="app" style="display:none">
