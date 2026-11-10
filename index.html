@@ -30,7 +30,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--surface);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-main{max-width:1040px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(110px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+main{max-width:1280px;margin:0 auto;padding:18px calc(16px + env(safe-area-inset-right)) calc(110px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
 header{display:flex;align-items:center;gap:12px;margin-bottom:4px}
 header img{width:42px;height:42px;border-radius:10px;flex:none}
 header h1{flex:1}
@@ -129,6 +129,10 @@ pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;pad
   .sheet{border-radius:18px 18px 0 0;max-height:94vh;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
   .fields{grid-template-columns:1fr 1fr}
 }
+
+/* full-width top bar */
+header.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;margin:0;background:color-mix(in srgb,var(--card) 88%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(10px);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) 10px calc(24px + env(safe-area-inset-left))}
+@media (max-width:640px){header.topbar{padding-left:calc(16px + env(safe-area-inset-left));padding-right:calc(16px + env(safe-area-inset-right))}}
 </style>
 <style id="splash-css">#splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,var(--sp1,#1c5cab),var(--sp2,#0d366b));color:#fff;opacity:1;transition:opacity .45s ease,visibility .45s;animation:spfail .01s linear 5s forwards}
 #splash.out{opacity:0;visibility:hidden;pointer-events:none}
@@ -147,12 +151,12 @@ pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;pad
 </head>
 <body>
 <div id="splash" style="--sp1:#1c5cab;--sp2:#0d366b" role="status" aria-label="Loading"><div class="sp-in"><img src="icon.svg" alt=""><div class="sp-name">Solar Tracker</div><div class="sp-dots"><i></i><i></i><i></i></div></div></div>
+<header class="topbar">
+  <img src="icon.svg" alt="">
+  <h1>Home Solar &amp; TNB Usage Tracker</h1>
+  <button class="btn" id="hdrAdd" type="button">+ Add month</button>
+</header>
 <main>
-  <header>
-    <img src="icon.svg" alt="">
-    <h1>Home Solar &amp; TNB Usage Tracker</h1>
-    <button class="btn" id="hdrAdd" type="button">+ Add month</button>
-  </header>
   <p class="sub">Real household usage = what TNB's meter sees <em>plus</em> the solar you used directly, which the bill never shows.</p>
 
   <div class="tiles" id="tiles"></div>
