@@ -182,7 +182,7 @@ function stats(){
 function lastCt(){var s=sorted();for(var i=s.length-1;i>=0;i--){if(s[i].status==='Complete'&&s[i].ct!=null)return s[i].ct}return null}
 function prefill(){if(edit!=null)return;var f=$('f');if(f.value===''){var c=lastCt();if(c!=null)f.value=c}}
 function render(){
-  var rows='',cards='',s=sorted();
+  var rows='',cards='',s=sorted().reverse();
   s.forEach(function(r){
     var c=calc(r),dr=r.status==='Draft';
     var del='<button class="del'+(pend===r.row?' sure':'')+'" data-del="'+r.row+'" aria-label="Delete trip">'+(pend===r.row?'Sure?':'✕')+'</button>';
