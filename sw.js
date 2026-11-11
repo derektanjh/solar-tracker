@@ -1,8 +1,8 @@
-/* Offline + slow-line support for the Home Solar and Tesla Efficiency portals.
+/* Offline + slow-line support for Home Solar tracker.
    Pages and data: try the network first, fall back to the saved copy if the line is slow or down.
    Icons, styles, scripts: show the saved copy instantly and refresh it in the background. */
-var CACHE='portal-v1';
-var SHELL=['./','index.html','tesla.html','portal.css','portal.js','data.json','icon.svg','icon-192.png','apple-touch-icon.png','tesla-icon.svg','tesla-icon-180.png','tesla-icon-192.png','tesla-icon-512.png','manifest.webmanifest','tesla.webmanifest'];
+var CACHE='solar-v2';
+var SHELL=['./','index.html','portal.css','portal.js','data.json','icon.svg','icon-192.png','apple-touch-icon.png','manifest.webmanifest'];
 var WAIT=3500; // ms to wait for the network before using the saved copy
 
 self.addEventListener('install',function(e){
