@@ -69,7 +69,7 @@ h2{font-size:16px;margin:0 0 2px}
 .draft-row b{font-weight:600}
 .draft-row span:last-child{color:var(--accent);font-weight:600;white-space:nowrap}
 /* stat tiles */
-.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
 .tile .k{font-size:12.5px;color:var(--text2);font-weight:600}
 .tile .v{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.25;margin-top:4px}
@@ -184,14 +184,13 @@ footer{max-width:1280px;margin:0 auto;padding:0 16px calc(28px + env(safe-area-i
 
 <div class="tiles">
   <div class="tile"><div class="k">Total distance</div><div class="v" id="a1">0.0</div><div class="d" id="a1d">Completed trips</div></div>
-  <div class="tile hero"><div class="k">At the charger</div><div class="v" id="a2">0.0</div><div class="d">Distance ÷ energy added at the charger</div></div>
-  <div class="tile"><div class="k">Adjusted for charge level</div><div class="v" id="a3">0.0</div><div class="d">Charger figure, scaled to the % you actually used</div></div>
+  <div class="tile hero"><div class="k">Adjusted for charge level</div><div class="v" id="a3">0.0</div><div class="d">Energy added at the charger, scaled to the % you actually used</div></div>
   <div class="tile"><div class="k">Tesla's reading</div><div class="v" id="a4">0.0</div><div class="d">Distance ÷ energy shown on Tesla's trip screen</div></div>
 </div>
 
 <div class="card" id="trendCard" style="display:none">
   <div class="card-h"><div><h2>Efficiency per trip</h2><div class="note">km per kWh for each completed trip, oldest to newest. Higher is better.</div></div>
-  <div class="legend"><span style="--c:var(--l1)">At the charger</span><span style="--c:var(--l2)">Tesla's reading</span></div></div>
+  <div class="legend"><span style="--c:var(--l1)">Adjusted</span><span style="--c:var(--l2)">Tesla's reading</span></div></div>
   <div class="chartwrap" id="trend"></div>
 </div>
 
@@ -199,8 +198,7 @@ footer{max-width:1280px;margin:0 auto;padding:0 16px calc(28px + env(safe-area-i
   <div class="card-h"><div><h2>Trip history</h2><div class="note"><span class="only-d">Click a trip to edit or delete it.</span><span class="only-m">Tap a trip to edit or delete it.</span></div></div>
   <details class="explain"><summary>What do the efficiency numbers mean?</summary></details></div>
   <div class="defs" id="defs" style="display:none">
-    <div><b>At the charger</b>Distance ÷ energy you paid for at the charger. Includes charging losses, so it's the most honest cost figure.</div>
-    <div><b>Adjusted for charge level</b>The charger figure scaled to the battery % this trip actually used. Useful when you didn't charge back to your usual level.</div>
+    <div><b>Adjusted for charge level</b>Distance ÷ the energy this trip actually used, worked out from what you added at the charger and the battery % you used. Includes charging losses and stays fair when you don't charge back to the same level.</div>
     <div><b>Tesla's reading</b>Distance ÷ energy from Tesla's own trip screen. Excludes charging losses, so it's usually higher.</div>
   </div>
   <div class="scroll tbl" id="list"></div>
@@ -295,7 +293,7 @@ function prefill(){if(edit!=null)return;var f=$('f');if(f.value===''){var c=last
 var NS='http://www.w3.org/2000/svg';
 function el(t,a,p){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
 function trend(){
-  var pts=sorted().filter(function(r){return r.status==='Complete'}).map(function(r){var c=calc(r);return {r:r,c:c.c,u:c.u}}).filter(function(p){return p.c!=null||p.u!=null});
+  var pts=sorted().filter(function(r){return r.status==='Complete'}).map(function(r){var c=calc(r);return {r:r,c:c.a,u:c.u}}).filter(function(p){return p.c!=null||p.u!=null});
   $('trendCard').style.display=pts.length>=2?'':'none';if(pts.length<2)return;
   var w=$('trend');w.innerHTML='';
   var W=Math.max(280,w.clientWidth||900),narrow=W<560,H=narrow?190:220,m={t:14,r:12,b:26,l:34};
@@ -315,7 +313,7 @@ function trend(){
   pts.forEach(function(p,i){if(i%every===0||i===pts.length-1){var t=el('text',{x:X(i),y:H-7,'text-anchor':'middle'},svg);t.textContent=sdate(p.r.date)}});
   var band=iw/Math.max(1,pts.length-1);
   pts.forEach(function(p,i){var hit=el('rect',{x:X(i)-band/2,y:m.t,width:band,height:ih,fill:'transparent'},svg);
-    var mv=function(e){var b=w.getBoundingClientRect();tip.innerHTML='<b>'+fdate(p.r.date)+' · '+n(p.r.d,1,' km')+'</b>At the charger: '+e1(p.c)+' km/kWh<br>Tesla\'s reading: '+e1(p.u)+' km/kWh';tip.style.display='block';var x=e.clientX-b.left,tw=tip.offsetWidth,l=x+12;if(l+tw>W)l=Math.max(0,x-tw-12);tip.style.left=l+'px';tip.style.top=Math.max(0,e.clientY-b.top-tip.offsetHeight-8)+'px'};
+    var mv=function(e){var b=w.getBoundingClientRect();tip.innerHTML='<b>'+fdate(p.r.date)+' · '+n(p.r.d,1,' km')+'</b>Adjusted: '+e1(p.c)+' km/kWh<br>Tesla\'s reading: '+e1(p.u)+' km/kWh';tip.style.display='block';var x=e.clientX-b.left,tw=tip.offsetWidth,l=x+12;if(l+tw>W)l=Math.max(0,x-tw-12);tip.style.left=l+'px';tip.style.top=Math.max(0,e.clientY-b.top-tip.offsetHeight-8)+'px'};
     hit.addEventListener('pointermove',mv);hit.addEventListener('pointerdown',mv);hit.addEventListener('pointerleave',function(){tip.style.display='none'})});
 }
 
@@ -327,23 +325,23 @@ function render(){
     rows+='<tr data-row="'+r.row+'"><td class="l">'+fdate(r.date)+(dr?'<span class="chip">Draft</span>':'')+(r.pending?'<span class="chip up">'+(flushing?'Uploading…':'Not uploaded yet')+'</span>':'')+'</td><td>'+n(r.d,1,' km')+'</td><td>'+(r.f!=null||r.t!=null?(r.f!=null?n(r.f,0,'%'):'?')+' → '+(r.t!=null?n(r.t,0,'%'):'?'):'')+'</td><td class="dim">'+n(r.rem,0,' km')+'</td>'+
       '<td class="sep">'+n(r.ch,2,' kWh')+'</td><td class="dim">'+n(r.ct,0,'%')+'</td><td class="sep">'+n(r.u,2,' kWh')+'</td>'+
       '<td class="sep dim">'+n(r.pp,1,'%')+(r.pk!=null?' / '+n(r.pk,1,' km'):'')+'</td>'+
-      '<td class="sep eff">'+e1(c.c)+'</td><td class="eff">'+e1(c.a)+'</td><td class="eff">'+e1(c.u)+'</td><td><span class="edit-l">'+(r.pending?'':dr?'Finish':'Edit')+'</span></td></tr>';
+      '<td class="sep eff">'+e1(c.a)+'</td><td class="eff">'+e1(c.u)+'</td><td><span class="edit-l">'+(r.pending?'':dr?'Finish':'Edit')+'</span></td></tr>';
     var meta=[];
     if(r.ch!=null)meta.push('Charged '+n(r.ch,2,' kWh')+(r.ct!=null?' to '+n(r.ct,0,'%'):''));
     if(r.u!=null)meta.push('Tesla used '+n(r.u,2,' kWh'));
     if(r.rem!=null)meta.push('Range left '+n(r.rem,0,' km'));
     if(r.pp!=null||r.pk!=null)meta.push('Lost while parked '+(r.pp!=null?n(r.pp,1,'%'):'')+(r.pk!=null?' ('+n(r.pk,1,' km')+')':''));
-    cards+='<div class="trip" data-row="'+r.row+'"><div class="t-head"><span class="t-date">'+fdate(r.date)+'</span>'+(dr?'<span class="chip">Draft</span>':'')+(r.pending?'<span class="chip up">'+(flushing?'Uploading…':'Not uploaded')+'</span>':'<span class="edit-l">'+(dr?'Finish':'Edit')+'</span>')+'</div><div class="t-main"><b>'+(r.d!=null?n(r.d,1,' km'):'–')+'</b><span>Battery '+(r.f!=null?n(r.f,0,'%'):'?')+' → '+(r.t!=null?n(r.t,0,'%'):'?')+'</span></div><div class="t-eff"><div><b>'+e1(c.c)+'</b><span>At charger</span></div><div><b>'+e1(c.a)+'</b><span>Adjusted</span></div><div><b>'+e1(c.u)+'</b><span>Tesla</span></div></div>'+(meta.length?'<div class="t-meta">'+meta.join(' · ')+'</div>':'')+'</div>';
+    cards+='<div class="trip" data-row="'+r.row+'"><div class="t-head"><span class="t-date">'+fdate(r.date)+'</span>'+(dr?'<span class="chip">Draft</span>':'')+(r.pending?'<span class="chip up">'+(flushing?'Uploading…':'Not uploaded')+'</span>':'<span class="edit-l">'+(dr?'Finish':'Edit')+'</span>')+'</div><div class="t-main"><b>'+(r.d!=null?n(r.d,1,' km'):'–')+'</b><span>Battery '+(r.f!=null?n(r.f,0,'%'):'?')+' → '+(r.t!=null?n(r.t,0,'%'):'?')+'</span></div><div class="t-eff"><div><b>'+e1(c.a)+'</b><span>Adjusted</span></div><div><b>'+e1(c.u)+'</b><span>Tesla</span></div></div>'+(meta.length?'<div class="t-meta">'+meta.join(' · ')+'</div>':'')+'</div>';
   });
   var none=!loaded?'<p class="empty"><span class="spin"></span>Loading trips…</p>':failed?'<p class="empty">Could not load trips. Tap Refresh to try again.</p>':'<p class="empty">No trips yet. Tap Add trip to log your first one.</p>';
   var head='<thead><tr class="grp"><th colspan="4" style="--c:var(--c-trip)">Trip</th><th colspan="2" class="sep" style="--c:var(--c-chg)">Charging</th><th class="sep" style="--c:var(--c-tsl)">Tesla</th><th class="sep" style="--c:var(--c-park)">Parked</th><th colspan="3" class="sep" style="--c:var(--c-eff)">Efficiency (km/kWh)</th><th class="gap"></th></tr>'+
-    '<tr><th class="l">Date</th><th>Distance</th><th>Battery</th><th>Range left</th><th class="sep">Energy added</th><th>Up to</th><th class="sep">Energy used</th><th class="sep">Lost</th><th class="sep">At charger</th><th>Adjusted</th><th>Tesla</th><th></th></tr></thead>';
+    '<tr><th class="l">Date</th><th>Distance</th><th>Battery</th><th>Range left</th><th class="sep">Energy added</th><th>Up to</th><th class="sep">Energy used</th><th class="sep">Lost</th><th class="sep">Adjusted</th><th>Tesla</th><th></th></tr></thead>';
   $('list').innerHTML=s.length?'<table>'+head+'<tbody>'+rows+'</tbody></table>':none;
   $('cards').innerHTML=s.length?cards:none;
   var dl=s.filter(function(r){return r.status==='Draft'});
   $('drafts').innerHTML=dl.length?'<div class="card drafts"><h2>'+(dl.length===1?'1 draft to finish':dl.length+' drafts to finish')+'</h2><div class="note">Trips you started but haven\'t completed yet.</div>'+dl.map(function(r){return '<button class="draft-row" type="button" data-row="'+r.row+'"><span><b>'+fdate(r.date)+'</b> · '+(r.d!=null?n(r.d,1,' km'):'no distance yet')+'</span><span>Finish →</span></button>'}).join('')+'</div>':'';
   var S=stats(),U=' <small>km/kWh</small>';
-  [['a1',S.td.toFixed(1)+' <small>km</small>'],['a2',S.c!=null?S.c.toFixed(1)+U:'–'],['a3',S.a!=null?S.a.toFixed(1)+U:'–'],['a4',S.u!=null?S.u.toFixed(1)+U:'–']].forEach(function(x){var b=$(x[0]);b.classList.toggle('skel',!loaded);b.innerHTML=!loaded?'0.0 <small>km</small>':(failed&&!trips.length)?'–':x[1]});
+  [['a1',S.td.toFixed(1)+' <small>km</small>'],['a3',S.a!=null?S.a.toFixed(1)+U:'–'],['a4',S.u!=null?S.u.toFixed(1)+U:'–']].forEach(function(x){var b=$(x[0]);b.classList.toggle('skel',!loaded);b.innerHTML=!loaded?'0.0 <small>km</small>':(failed&&!trips.length)?'–':x[1]});
   $('a1d').textContent=loaded&&!failed?S.nc+(S.nc===1?' completed trip':' completed trips'):'Completed trips';
   var last=sorted().filter(function(r){return r.status==='Complete'}).pop();
   var q=outbox.length?(flushing?'Uploading '+outbox.length+(outbox.length===1?' change…':' changes…'):'⏳ '+outbox.length+(outbox.length===1?' change':' changes')+' waiting to upload'):'';
