@@ -236,8 +236,9 @@ footer a{color:var(--muted)}
     <div class="formula">
       <b>Solar used directly</b> = Solar generated − Export<br>
       <b>Actual usage</b> = Import + Solar generated − Export<br>
-      <b>Without-solar bill</b> = your actual usage billed under the same ToU tariff, AFA, incentive, retail, service tax and KWTBB rules as that month's bill (this method reproduces your real bills to the sen).<br>
-      <b>NEM</b> credits cover Energy, Capacity &amp; Network kWh-for-kWh; AFA, retail, tax and KWTBB are worked out on full import.<br>
+      <b>Without-solar bill</b> = your actual usage billed under the same TNB tariff (Time-of-Use or standard), AFA, incentive, retail, service tax and KWTBB rules as that month's bill. For Time-of-Use this reproduces real bills to the sen; the standard tariff uses TNB's published rates.<br>
+      <b>Rates (from Jul 2025):</b> Energy: Time-of-Use 28.52 sen peak / 24.43 sen off-peak, standard 27.03 sen, all +10 sen above 1,500 kWh · Capacity 4.55 sen · Network 12.85 sen · Retail RM10 (waived at 600 kWh or less).<br>
+      <b>Saved</b> = Estimated bill without solar − Bill actually paid. This works the same for <b>NEM</b> (exports offset Energy, Capacity &amp; Network kWh-for-kWh) and <b>Solar ATAP</b> (exports earn a credit each month that doesn't carry forward), because the bill you paid already includes the credit.<br>
       <b>Bill covered by solar</b> = 1 − Bill paid ÷ Estimated bill without solar
     </div>
   </details>
@@ -252,6 +253,15 @@ footer a{color:var(--muted)}
     <h3 id="shT">Add a month</h3>
     <div class="note" id="shSub">Upload the TNB bill, then type the solar figure from your app.</div>
 
+    <div class="step" id="planStep">
+      <div class="lbl">Your TNB plan <span style="text-transform:none;letter-spacing:0;font-weight:500">· remembered for next time</span></div>
+      <div style="display:flex;gap:10px 16px;flex-wrap:wrap;align-items:center">
+        <div class="tabs" role="tablist" id="tfTabs" aria-label="Tariff"><button type="button" data-tf="tou">Time-of-Use</button><button type="button" data-tf="std">Standard tariff</button></div>
+        <div class="tabs" role="tablist" id="scTabs" aria-label="Solar scheme"><button type="button" data-sc="nem">NEM</button><button type="button" data-sc="atap">Solar ATAP</button></div>
+      </div>
+      <div class="note" id="planHint" style="margin-top:6px"></div>
+    </div>
+
     <div class="step">
       <div class="lbl">1 · TNB bill</div>
       <label class="drop" id="drop">
@@ -264,11 +274,11 @@ footer a{color:var(--muted)}
         <div class="fields">
           <label class="f">Bill month<input class="in" name="month" type="month"></label>
           <label class="f">Bill amount (RM)<input class="in" name="bill" inputmode="decimal"><small>"Jumlah Bil Anda", page 1</small></label>
-          <label class="f">Import peak<input class="in" name="import_peak" inputmode="decimal"><small>kWh P (I), page 3</small></label>
-          <label class="f">Import off-peak<input class="in" name="import_offpeak" inputmode="decimal"><small>kWh O (I), page 3</small></label>
-          <label class="f">Export peak<input class="in" name="export_peak" inputmode="decimal"><small>kWh P (E), page 3</small></label>
-          <label class="f">Export off-peak<input class="in" name="export_offpeak" inputmode="decimal"><small>kWh O (E), page 3</small></label>
-          <label class="f">Baki NEM (kWh)<input class="in" name="nem_balance" inputmode="decimal"><small>page 1, right side</small></label>
+          <label class="f"><span id="lImpP">Import peak</span><input class="in" name="import_peak" inputmode="decimal"><small id="hImpP">kWh P (I), page 3</small></label>
+          <label class="f touOnly">Import off-peak<input class="in" name="import_offpeak" inputmode="decimal"><small>kWh O (I), page 3</small></label>
+          <label class="f"><span id="lExpP">Export peak</span><input class="in" name="export_peak" inputmode="decimal"><small id="hExpP">kWh P (E), page 3</small></label>
+          <label class="f touOnly">Export off-peak<input class="in" name="export_offpeak" inputmode="decimal"><small>kWh O (E), page 3</small></label>
+          <label class="f nemOnly">Baki NEM (kWh)<input class="in" name="nem_balance" inputmode="decimal"><small>page 1, right side</small></label>
           <label class="f">AFA rate (RM/kWh)<input class="in" name="afa" inputmode="decimal"><small>"AFA (… RM0.0361/kWh)", page 2</small></label>
         </div>
       </details>
@@ -345,21 +355,25 @@ function calc(m){
 }
 function ruleFor(month,rules){return (rules||[]).find(r=>month>=r.from&&month<=r.to)}
 
-/* ---------- TNB tariff model (Domestic ToU, from Jul 2025; validated against May–Oct 2026 bills) ---------- */
-const TARIFF={pk:0.2852,op:0.2443,cap:0.0455,net:0.1285};
+/* ---------- TNB domestic tariff model (from 1 Jul 2025) ----------
+   Time-of-Use: validated to the sen against the owner's real bills (Feb–Oct 2026).
+   Standard (general) tariff: same structure with one energy rate, from TNB's published Jul 2025 rates
+   (not yet checked against a real standard bill). Energy above 1,500 kWh a month costs 10 sen/kWh more on both. */
+const TARIFF={pk:0.2852,op:0.2443,std:0.2703,hi:0.10,cap:0.0455,net:0.1285};
 const EEI=[[200,25],[250,24.5],[300,22.5],[350,21],[400,17],[450,14.5],[500,12],[550,10.5],[600,9],[650,7.5],[700,5.5],[750,4.5],[800,4],[850,2.5],[900,1],[1000,0.5]];
 function eeiRate(u){for(const[l,r]of EEI)if(u<=l)return r/100;return 0}
-function tnbBill(peak,off,month,afa,rules){
-  const u=peak+off,rule=ruleFor(month,rules),thr=rule?rule.import_limit:600,over=u>thr,e=eeiRate(u);
-  const energy=peak*TARIFF.pk+off*TARIFF.op,cap=u*TARIFF.cap,net=u*TARIFF.net,afaC=over?u*afa:0,retail=over?10:0,eeiC=-u*e;
+function tnbBill(peak,off,month,afa,rules,tariff){
+  const u=peak+off,rule=ruleFor(month,rules),thr=rule?rule.import_limit:600,over=u>thr,e=eeiRate(u),std=tariff==="std";
+  const above=Math.max(0,u-1500)*TARIFF.hi; // higher energy rate for kWh above 1,500
+  const energy=(std?u*TARIFF.std:peak*TARIFF.pk+off*TARIFF.op)+above,cap=u*TARIFF.cap,net=u*TARIFF.net,afaC=over?u*afa:0,retail=over?10:0,eeiC=-u*e;
   const ex=Math.max(0,u-thr);
-  const st=over?0.08*(ex*(TARIFF.op+afa+TARIFF.cap+TARIFF.net-e)+retail):0;
+  const st=over?0.08*(ex*((std?TARIFF.std:TARIFF.op)+afa+TARIFF.cap+TARIFF.net-e)+retail):0;
   const kw=u>300?0.016*(energy+cap+net+eeiC):0;
   return energy+cap+net+afaC+retail+eeiC+st+kw;
 }
 function withoutSolar(r,rules){
   const fp=r.exp?r.export_peak/r.exp:0.2; // split solar used directly peak/off-peak like the exports
-  return tnbBill(r.import_peak+r.direct*fp,r.import_offpeak+r.direct*(1-fp),r.month,r.afa||0,rules);
+  return tnbBill(r.import_peak+r.direct*fp,r.import_offpeak+r.direct*(1-fp),r.month,r.afa||0,rules,r.tariff);
 }
 
 /* ---------- charts (sized to the screen) ---------- */
@@ -429,7 +443,8 @@ function render(){
     <div class="tile"><div class="k">Actual usage · ${lbl(last.month)}</div><div class="v">${f0(last.usage)} kWh</div><div class="d">The bill only shows ${f0(last.imp)} kWh from the grid</div></div>
     <div class="tile"><div class="k">Average monthly usage</div><div class="v">${f0(sum("usage")/n)} kWh</div><div class="d">Across ${n} months of bills</div></div>
     <div class="tile"><div class="k">Solar generated · ${lbl(last.month)}</div><div class="v">${f0(last.solar)} kWh</div><div class="d">${f0(last.selfPct)}% used at home, the rest exported to TNB</div></div>
-    <div class="tile"><div class="k">NEM credit left</div><div class="v">${f0(last.nem_balance)} kWh</div><div class="d">Unused export credit · expires 31 Dec</div></div>`;
+    ${last.scheme==="atap"?`<div class="tile"><div class="k">Solar exported · ${lbl(last.month)}</div><div class="v">${f0(last.exp)} kWh</div><div class="d">Solar ATAP: credited on this bill, doesn't carry forward</div></div>`
+      :`<div class="tile"><div class="k">NEM credit left</div><div class="v">${f0(last.nem_balance)} kWh</div><div class="d">Unused export credit · expires 31 Dec</div></div>`}`;
   $("meta").textContent=`TNB bill & NEM tracking · latest bill ${lblLong(last.month)}`;
   $("saveNote").textContent=`Without solar you'd have paid about ${rm(sum("wo"))} over ${n} months instead of ${rm(sum("bill"))}: an estimated ${rm(sum("saved"))} saved, about ${rm(sum("saved")/n)} a month.`;
   groupChart("c3",rows,{aria:"Monthly bill without solar compared with the bill actually paid",
@@ -443,16 +458,16 @@ function render(){
   stackChart("c2",rows,{aria:"Monthly grid import compared with the 800 kWh limit",total:r=>r.imp,minMax:850,
     series:[{color:"var(--grid-c)",value:r=>r.imp}],topLabel:r=>f0(r.imp),
     limitLine:r=>{const x=ruleFor(r.month,rules);return x?x.import_limit:null},
-    tip:r=>{const x=ruleFor(r.month,rules);return `<b>${lbl(r.month)} · import ${f0(r.imp)} kWh</b>Peak ${f0(r.import_peak)} · Off-peak ${f0(r.import_offpeak)}<br>`+(x?(r.imp<=x.import_limit?`Under ${x.import_limit} by ${f0(x.import_limit-r.imp)}`:`Over ${x.import_limit} by ${f0(r.imp-x.import_limit)}`):"No limit rule this month")}});
+    tip:r=>{const x=ruleFor(r.month,rules);return `<b>${lbl(r.month)} · import ${f0(r.imp)} kWh</b>${r.tariff==="std"?"Standard tariff":`Peak ${f0(r.import_peak)} · Off-peak ${f0(r.import_offpeak)}`}<br>`+(x?(r.imp<=x.import_limit?`Under ${x.import_limit} by ${f0(x.import_limit-r.imp)}`:`Over ${x.import_limit} by ${f0(r.imp-x.import_limit)}`):"No limit rule this month")}});
   const flag=r=>{const x=ruleFor(r.month,rules);return x?(r.imp<=x.import_limit?'<span class="flag ok">✓ Under</span>':'<span class="flag over">▲ Over</span>'):'<span class="note">—</span>'};
   $("tbl").innerHTML=`<thead><tr class="grp"><th class="gap"></th><th colspan="2" style="--c:var(--grid-c)">Grid (kWh)</th><th colspan="3" class="sep" style="--c:var(--solar-c)">Solar (kWh)</th><th class="sep" style="--c:var(--text2)">Usage</th><th colspan="3" class="sep" style="--c:var(--good)">Bill</th><th colspan="2" class="sep" style="--c:var(--base-c)">NEM &amp; limit</th></tr>
     <tr><th>Month</th><th>Import</th><th>Export</th><th class="sep">Generated</th><th>Used at home</th><th>Self-use</th><th class="sep">Actual (kWh)</th><th class="sep">Paid</th><th>Without solar</th><th class="sv">Saved</th><th class="sep">NEM credit</th><th>800 limit</th></tr></thead><tbody>`+
-    rows.slice().reverse().map(r=>`<tr data-m="${r.month}"><td>${lbl(r.month)}</td><td>${f0(r.imp)}</td><td>${f0(r.exp)}</td><td class="sep">${f1(r.solar)}</td><td>${f1(r.direct)}</td><td>${f0(r.selfPct)}%</td><td class="sep hl">${f1(r.usage)}</td><td class="sep">${rm(r.bill)}</td><td>${rm(r.wo)}</td><td class="hl sv">${rm(r.saved)}</td><td class="sep">${f0(r.nem_balance)}</td><td>${flag(r)}</td></tr>`).join("")+"</tbody>";
+    rows.slice().reverse().map(r=>`<tr data-m="${r.month}"><td>${lbl(r.month)}</td><td>${f0(r.imp)}</td><td>${f0(r.exp)}</td><td class="sep">${f1(r.solar)}</td><td>${f1(r.direct)}</td><td>${f0(r.selfPct)}%</td><td class="sep hl">${f1(r.usage)}</td><td class="sep">${rm(r.bill)}</td><td>${rm(r.wo)}</td><td class="hl sv">${rm(r.saved)}</td><td class="sep">${r.scheme==="atap"?'<span class="note">ATAP</span>':f0(r.nem_balance)}</td><td>${flag(r)}</td></tr>`).join("")+"</tbody>";
   $("mcards").innerHTML=rows.slice().reverse().map(r=>`<div class="mcard" data-m="${r.month}">
     <div class="top"><b>${lblLong(r.month)}</b><span class="save">saved ${rm(r.saved)}</span></div>${(()=>{const x=ruleFor(r.month,rules);return x?`<div class="note" style="margin-top:2px">${r.imp<=x.import_limit?"✓ Import under "+x.import_limit+" kWh":"▲ Import over "+x.import_limit+" kWh"}</div>`:""})()}
     <div class="grid"><span>Actual usage <b>${f0(r.usage)} kWh</b></span><span>Paid <b>${rm(r.bill)}</b></span>
     <span>Import <b>${f0(r.imp)}</b> · Export <b>${f0(r.exp)}</b></span><span>Without solar <b>${rm(r.wo)}</b></span>
-    <span>Solar <b>${f1(r.solar)}</b> (${f0(r.selfPct)}% used at home)</span><span>NEM credit <b>${f0(r.nem_balance)} kWh</b></span></div></div>`).join("");
+    <span>Solar <b>${f1(r.solar)}</b> (${f0(r.selfPct)}% used at home)</span><span>${r.scheme==="atap"?"Solar ATAP":`NEM credit <b>${f0(r.nem_balance)} kWh</b>`}</span></div></div>`).join("");
   document.querySelectorAll("[data-m]").forEach(e=>e.onclick=()=>openSheet(DATA.months.find(m=>m.month===e.dataset.m)));
 }
 let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>DATA&&render(),150)});
@@ -476,7 +491,13 @@ function parseBillText(t){
   const per=t.match(/(\d{2})\.(\d{2})\.(\d{4})\s*-\s*(\d{2})\.(\d{2})\.(\d{4})/);
   if(per){const sd=+per[1];out.month=sd<=15?`${per[3]}-${per[2]}`:`${per[6]}-${per[5]}`;out.period=`${per[1]}.${per[2]} – ${per[4]}.${per[5]}.${per[6]}`}else miss.push("billing period");
   const reg={import_peak:/(\d[\d,]*)\s*kWh\s*P\s*\(\s*I\s*\)/,import_offpeak:/(\d[\d,]*)\s*kWh\s*O\s*\(\s*I\s*\)/,export_peak:/(\d[\d,]*)\s*kWh\s*P\s*\(\s*E\s*\)/,export_offpeak:/(\d[\d,]*)\s*kWh\s*O\s*\(\s*E\s*\)/};
-  for(const k in reg){const m=t.match(reg[k]);if(m)out[k]=num(m[1]);else miss.push(k.replace("_"," "))}
+  for(const k in reg){const m=t.match(reg[k]);if(m)out[k]=num(m[1])}
+  if(out.import_peak==null&&out.import_offpeak==null){ // no peak/off-peak split: try a standard-tariff bill (best effort)
+    const mi=t.match(/(\d[\d,]*)\s*kWh\s*\(\s*I\s*\)/),me=t.match(/(\d[\d,]*)\s*kWh\s*\(\s*E\s*\)/);
+    if(mi){out.tariff="std";out.import_peak=num(mi[1]);out.import_offpeak=0;out.export_peak=me?num(me[1]):0;out.export_offpeak=0;if(!me)miss.push("export kWh")}
+    else miss.push("import kWh")
+  }else for(const k in reg)if(out[k]==null)miss.push(k.replace("_"," "));
+  if(!/Baki NEM/i.test(t)&&/ATAP/i.test(t))out.scheme="atap";
   let m=t.match(/Jumlah Bil Anda\s*\(RM\)\s*(-?[\d,]+\.\d{2})/);if(m)out.bill=num(m[1]);else miss.push("bill amount");
   m=t.match(/Baki NEM\s*(\d[\d,]*)\s*kWh/);out.nem_balance=m?num(m[1]):0;
   m=t.match(/AFA\s*\(\s*[\d,]+\s*kWh\s*,\s*(-?)\s*RM\s*(-?[\d.]+)\s*\/\s*kWh/);if(m)out.afa=num(m[2])*(m[1]==="-"?-1:1);else miss.push("AFA rate");
@@ -486,8 +507,25 @@ function parseBillText(t){
 /* ---------- add / edit sheet ---------- */
 const KEYS=["month","import_peak","import_offpeak","export_peak","export_offpeak","solar","bill","nem_balance","afa"];
 const field=k=>k==="solar"?$("solarIn"):document.querySelector(`.fields [name="${k}"]`);
-function readForm(){const o={};for(const k of KEYS){const v=field(k).value.trim();o[k]=k==="month"?v:(v===""?NaN:parseFloat(v.replace(/,/g,"")))}if(isNaN(o.nem_balance))o.nem_balance=0;if(isNaN(o.afa))o.afa=0;return o}
-function fillForm(o){for(const k of KEYS){if(o[k]!==undefined&&o[k]!==null)field(k).value=o[k]}}
+let PLAN={tariff:"tou",scheme:"nem"}; // the bill being entered
+function setPlan(p,silent){
+  PLAN={tariff:p.tariff==="std"?"std":"tou",scheme:p.scheme==="atap"?"atap":"nem"};
+  const std=PLAN.tariff==="std",atap=PLAN.scheme==="atap";
+  document.querySelectorAll("#tfTabs [data-tf]").forEach(b=>b.setAttribute("aria-selected",b.dataset.tf===PLAN.tariff));
+  document.querySelectorAll("#scTabs [data-sc]").forEach(b=>b.setAttribute("aria-selected",b.dataset.sc===PLAN.scheme));
+  document.querySelectorAll(".touOnly").forEach(x=>x.style.display=std?"none":"");
+  document.querySelectorAll(".nemOnly").forEach(x=>x.style.display=atap?"none":"");
+  $("lImpP").textContent=std?"Import (kWh)":"Import peak";$("lExpP").textContent=std?"Export (kWh)":"Export peak";
+  $("hImpP").textContent=std?"kWh imported from TNB this month":"kWh P (I), page 3";$("hExpP").textContent=std?"kWh exported to TNB this month":"kWh P (E), page 3";
+  $("planHint").textContent=(std?"Standard tariff: one energy rate all day. Reading standard bill PDFs is new, so check the numbers below (or type them in).":"Time-of-Use: separate peak and off-peak readings.")+(atap?" Solar ATAP: exported kWh earn a credit each month, with no NEM balance to carry forward.":"");
+  if(!silent)update();
+}
+document.querySelectorAll("#tfTabs [data-tf]").forEach(b=>b.onclick=()=>{setPlan({...PLAN,tariff:b.dataset.tf});if(PLAN.tariff==="std")$("manualWrap").open=true});
+document.querySelectorAll("#scTabs [data-sc]").forEach(b=>b.onclick=()=>setPlan({...PLAN,scheme:b.dataset.sc}));
+function lastPlan(){const ms=(DATA&&DATA.months)||[],l=ms.slice().sort((a,b)=>a.month.localeCompare(b.month)).at(-1);return (LOCAL&&LOCAL.plan)||(l?{tariff:l.tariff,scheme:l.scheme}:{})}
+function readForm(){const o={};for(const k of KEYS){const v=field(k).value.trim();o[k]=k==="month"?v:(v===""?NaN:parseFloat(v.replace(/,/g,"")))}if(isNaN(o.nem_balance))o.nem_balance=0;if(isNaN(o.afa))o.afa=0;
+  if(PLAN.tariff==="std"){o.import_offpeak=0;o.export_offpeak=0}if(PLAN.scheme==="atap")o.nem_balance=0;o.tariff=PLAN.tariff;o.scheme=PLAN.scheme;return o}
+function fillForm(o){for(const k of KEYS){if(o[k]!==undefined&&o[k]!==null)field(k).value=o[k]}if(o.tariff||o.scheme)setPlan({tariff:o.tariff||PLAN.tariff,scheme:o.scheme||PLAN.scheme},true)}
 function valid(o){return /^\d{4}-\d{2}$/.test(o.month)&&["import_peak","import_offpeak","export_peak","export_offpeak","solar","bill"].every(k=>isFinite(o[k]))}
 function nextMonth(){if(!ROWS.length)return "";const[y,m]=ROWS.at(-1).month.split("-").map(Number);return m===12?`${y+1}-01`:`${y}-${String(m+1).padStart(2,"0")}`}
 function update(){
@@ -510,6 +548,7 @@ function serialize(d){return '{\n  "months": [\n'+d.months.map(m=>"    "+fmtMont
 function openSheet(existing){
   document.querySelectorAll(".fields input").forEach(i=>i.value="");$("solarIn").value="";$("pdf").value="";
   $("parsed").innerHTML="";$("saveErr").textContent="";
+  setPlan(existing?{tariff:existing.tariff,scheme:existing.scheme}:lastPlan(),true);
   if(existing){$("shT").textContent=`Edit ${lblLong(existing.month)}`;$("shSub").textContent="Correct any number, or upload the bill again.";fillForm(existing);$("manualWrap").open=true}
   else{$("shT").textContent="Add a month";$("shSub").textContent="Upload the TNB bill, then type the solar figure from your app.";field("month").value=nextMonth();$("manualWrap").open=false}
   update();$("ov").classList.add("open");$("ov").setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
@@ -531,7 +570,7 @@ async function handlePdf(file){
     $("parsed").innerHTML=`<div class="parsed" style="margin-top:10px">
       <div class="okmsg">${missing.length?"⚠️ Read most of the bill":"✓ Bill read"}${data.month?" · "+lblLong(data.month):""}</div>
       ${data.period?`<div class="row"><span>Billing period</span><span>${data.period}</span></div>`:""}
-      <div class="row"><span>Import from TNB</span><span>${f0(imp)} kWh (${data.import_peak??"?"} peak / ${data.import_offpeak??"?"} off-peak)</span></div>
+      <div class="row"><span>Import from TNB</span><span>${f0(imp)} kWh ${data.tariff==="std"?"(standard tariff)":`(${data.import_peak??"?"} peak / ${data.import_offpeak??"?"} off-peak)`}</span></div>
       <div class="row"><span>Export to TNB</span><span>${f0(exp)} kWh</span></div>
       <div class="row"><span>Bill amount</span><span>${data.bill!=null?rm(data.bill):"?"}</span></div>
       <div class="row"><span>NEM balance · AFA</span><span>${data.nem_balance} kWh · RM${data.afa??"?"}/kWh</span></div>
@@ -571,7 +610,7 @@ function showData(){
 function welcome(){
   ROWS=[];
   $("hero").innerHTML=`<div class="h-main welcome"><div class="h-k">Welcome to Home Solar</div><div class="h-v" style="font-size:26px">See what your solar saves you</div>
-    <div class="h-d">Add your TNB bill each month and the solar kWh from your solar app. Works with TNB <b>Domestic Time-of-Use</b> bills.<br><br><b>Sign in with Google</b> to keep your bills in your own Google account, so they show on your phone, laptop and any other device where you sign in.</div>
+    <div class="h-d">Add your TNB bill each month and the solar kWh from your solar app. Works with TNB domestic bills on <b>Time-of-Use</b> or the <b>standard tariff</b>, with <b>NEM</b> or <b>Solar ATAP</b>.<br><br><b>Sign in with Google</b> to keep your bills in your own Google account, so they show on your phone, laptop and any other device where you sign in.</div>
     <div class="acts"><button class="btn" type="button" id="wSign">Sign in with Google</button><button class="btn secondary" type="button" id="wAdd">Try without signing in</button><button class="btn secondary" type="button" id="wRestore">Restore a backup</button></div>
     <div class="note" style="margin-top:10px">Without signing in, your bills are kept only in this browser on this device.</div></div>`;
   $("tiles").innerHTML="";$("tbl").innerHTML="";$("mcards").innerHTML="";
@@ -650,7 +689,9 @@ function sync(fromTap){ // fromTap: may open the Google window
     if(!G.email){try{const r=await gfetch(`${GAPI}/about?fields=user(emailAddress)`);if(r.ok){G.email=(await r.json()).user.emailAddress;saveG()}}catch(e){if(e.auth)throw e}}
     const remote=await readRemote(),rm=remote&&Array.isArray(remote.months)?remote.months:[];
     const merged=mergeMonths(LOCAL.months,rm);
-    if(!remote||JSON.stringify(rm)!==JSON.stringify(merged))await writeRemote({app:"home-solar",version:1,updated:new Date().toISOString(),months:merged});
+    const plan=LOCAL.plan||(remote&&remote.plan)||null;
+    if(!remote||JSON.stringify(rm)!==JSON.stringify(merged)||JSON.stringify(remote.plan||null)!==JSON.stringify(plan))await writeRemote({app:"home-solar",version:1,updated:new Date().toISOString(),plan,months:merged});
+    if(plan)LOCAL.plan=plan;
     const added=merged.length-LOCAL.months.length;
     LOCAL.months=merged;saveLocal();G.dirty=false;G.last=Date.now();saveG();showData();
     if(fromTap)toast(added>0?`Synced ✓ ${added} month${added>1?"s":""} loaded from your Google Drive.`:"Synced with your Google Drive ✓");
@@ -694,7 +735,7 @@ $("bkIn").addEventListener("change",async e=>{
   try{
     const d=JSON.parse(await f.text()),list=Array.isArray(d)?d:d.months;
     if(!Array.isArray(list))throw new Error("this isn't a Home Solar backup");
-    const ok=list.filter(m=>m&&/^\d{4}-\d{2}$/.test(m.month)&&isFinite(m.import_peak)&&isFinite(m.solar)&&isFinite(m.bill)).map(m=>{const x={};KEYS.forEach(k=>x[k]=m[k]);x._t=m._t||0;return x});
+    const ok=list.filter(m=>m&&/^\d{4}-\d{2}$/.test(m.month)&&isFinite(m.import_peak)&&isFinite(m.solar)&&isFinite(m.bill)).map(m=>{const x={};KEYS.forEach(k=>x[k]=m[k]);if(m.tariff)x.tariff=m.tariff;if(m.scheme)x.scheme=m.scheme;x._t=m._t||0;return x});
     if(!ok.length)throw new Error("no bills found in it");
     const before=LOCAL.months.length;LOCAL.months=mergeMonths(LOCAL.months,ok);saveLocal();showData();closeData();
     toast(`Restored ✓ ${LOCAL.months.length-before} new month${LOCAL.months.length-before===1?"":"s"} added (${LOCAL.months.length} in total).`);
@@ -719,7 +760,8 @@ $("gIn").onclick=signIn;$("gSync").onclick=()=>sync(true);$("gOut").onclick=sign
 /* --- saving a month --- */
 function doSave(){
   const o=readForm();if(!valid(o))return;
-  const entry={};KEYS.forEach(k=>entry[k]=o[k]);entry._t=Date.now();
+  const entry={};KEYS.forEach(k=>entry[k]=o[k]);entry.tariff=o.tariff;entry.scheme=o.scheme;entry._t=Date.now();
+  LOCAL.plan={tariff:o.tariff,scheme:o.scheme};
   LOCAL.months=mergeMonths(LOCAL.months.filter(m=>m.month!==entry.month),[entry]);
   if(!saveLocal())return;
   showData();closeSheet();
