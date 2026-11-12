@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Home Solar privacy policy</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root{color-scheme:light dark;--surface:#fcfcfb;--card:#ffffff;--line:#e6e5e1;--text:#0b0b0b;--text2:#52514e;--accent:#2a78d6}
+@media (prefers-color-scheme:dark){:root{--surface:#1a1a19;--card:#232322;--line:#3a3a38;--text:#f0efec;--text2:#c3c2b7;--accent:#3987e5}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:720px;margin:0 auto;padding:24px 16px 60px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+header img{width:42px;height:42px;border-radius:10px}
+h1{font-size:24px;margin:0;line-height:1.2}
+h2{font-size:18px;margin:28px 0 6px}
+p,li{color:var(--text2)}
+b{color:var(--text)}
+a{color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-top:16px}
+.small{font-size:14px}
+</style>
+</head>
+<body>
+<main>
+<header><img src="icon.svg" alt=""><h1>Home Solar privacy policy</h1></header>
+<p class="small">Last updated 12 November 2026</p>
+
+<div class="card"><b>In short:</b> your bills and solar figures stay on your own device and, if you sign in, in your own Google Drive. The people who run Home Solar never receive or see them.</div>
+
+<h2>What Home Solar is</h2>
+<p>Home Solar (<a href="./">derektanjh.github.io/solar-tracker</a>) is a free website that works out how much your rooftop solar saves you, from your TNB electricity bills and your solar app's monthly figures.</p>
+
+<h2>What information it uses</h2>
+<ul>
+<li><b>Bill figures you enter or upload:</b> billing month, import and export kWh, bill amount, NEM balance and AFA rate, and the solar kWh you type in.</li>
+<li><b>Bill PDFs:</b> when you upload a TNB bill, it is read <b>on your device</b> to fill in those figures. The PDF is not uploaded or stored anywhere.</li>
+<li><b>If you sign in with Google:</b> an access token from Google and your Google account email address, which is shown in the Your data panel so you know which account you are using.</li>
+</ul>
+
+<h2>Where it is kept</h2>
+<ul>
+<li><b>On your device:</b> your figures are saved in your browser's storage so the page opens instantly and works offline.</li>
+<li><b>In your Google Drive (only if you sign in):</b> a single file called <i>Home Solar data.json</i>, so your figures appear on all your devices.</li>
+<li>Home Solar has <b>no server or database</b>. Nothing is sent to the people who run it.</li>
+</ul>
+
+<h2>Google account access</h2>
+<p>When you sign in, Home Solar asks only for the <b>"See, edit, create and delete only the specific Google Drive files you use with this app"</b> permission (<code>drive.file</code>). It can only read and write the one file it creates. It cannot see your other files, emails, contacts or anything else in your Google account. Your browser talks to Google directly; the data does not pass through any other server.</p>
+<p>Home Solar's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements. The data is used only to show you your own solar savings. It is never sold, shared, used for advertising, or used to train AI models.</p>
+
+<h2>Other services the website uses</h2>
+<ul>
+<li><b>GitHub Pages</b> hosts the website. Like any website host, GitHub may log technical details such as your IP address when the page loads.</li>
+<li><b>Google Identity Services</b> provides the "Sign in with Google" button.</li>
+<li><b>jsDelivr</b> serves the open-source PDF reader (pdf.js) that reads your bill on your device.</li>
+</ul>
+<p>There are no ads, analytics or tracking cookies.</p>
+
+<h2>Your choices</h2>
+<ul>
+<li><b>Use it without signing in:</b> your figures then stay only in that browser.</li>
+<li><b>Remove data from a device:</b> Your data → <i>Remove my bills from this device</i>.</li>
+<li><b>Delete your Drive copy:</b> delete <i>Home Solar data.json</i> from your Google Drive.</li>
+<li><b>Revoke access:</b> remove Home Solar at <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener">myaccount.google.com/connections</a>, or tap <i>Sign out</i> in Your data.</li>
+</ul>
+
+<h2>Changes and contact</h2>
+<p>If this policy changes, the new version will be posted on this page with a new date. Questions? Open an issue at <a href="https://github.com/derektanjh/solar-tracker/issues" target="_blank" rel="noopener">github.com/derektanjh/solar-tracker/issues</a>.</p>
+<p><a href="./">← Back to Home Solar</a></p>
+</main>
+</body>
+</html>
