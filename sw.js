@@ -1,7 +1,7 @@
 /* Offline + slow-line support for Home Solar tracker.
    Pages and data: try the network first, fall back to the saved copy if the line is slow or down.
    Icons, styles, scripts: show the saved copy instantly and refresh it in the background. */
-var CACHE='solar-v2';
+var CACHE='solar-v3';
 var SHELL=['./','index.html','portal.css','portal.js','data.json','icon.svg','icon-192.png','apple-touch-icon.png','manifest.webmanifest'];
 var WAIT=3500; // ms to wait for the network before using the saved copy
 
@@ -18,7 +18,7 @@ function fromCache(req){return caches.open(CACHE).then(function(c){return c.matc
 
 function networkFirst(req){
   return new Promise(function(resolve){
-    var done=false,net=fetch(req).then(function(r){return put(req,r)});
+    var done=false,net=fetch(req.url,{cache:'no-cache',credentials:'same-origin'}).then(function(r){return put(req,r)}); // always ask the server, never a stale browser copy
     var t=setTimeout(function(){fromCache(req).then(function(c){if(c&&!done){done=true;resolve(c)}})},WAIT);
     net.then(function(r){if(!done){done=true;clearTimeout(t);resolve(r)}}).catch(function(){
       clearTimeout(t);fromCache(req).then(function(c){if(!done){done=true;resolve(c||Response.error())}})});
