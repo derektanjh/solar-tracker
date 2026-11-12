@@ -2,7 +2,7 @@
    Pages and data: try the network first, fall back to the saved copy if the line is slow or down.
    Icons, styles, scripts: show the saved copy instantly and refresh it in the background. */
 var CACHE='solar-v3';
-var SHELL=['./','index.html','portal.css','portal.js','data.json','icon.svg','icon-192.png','apple-touch-icon.png','manifest.webmanifest'];
+var SHELL=['./','index.html','portal.css','portal.js','icon.svg','icon-192.png','apple-touch-icon.png','manifest.webmanifest'];
 var WAIT=3500; // ms to wait for the network before using the saved copy
 
 self.addEventListener('install',function(e){
