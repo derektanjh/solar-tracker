@@ -731,16 +731,6 @@ $("saveBtn").onclick=doSave;
 /* --- start --- */
 showData();
 if(G.on){loadGis().catch(()=>{});if(tokenOk())sync(false);else if(G.dirty)syncUI()}
-// one-time move of the original owner's bills from the old data.json: open the site with #import-old-data
-function importOld(){
-  if(location.hash!=="#import-old-data")return;
-  history.replaceState(null,"",location.pathname);
-  fetch("data.json?"+Date.now()).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(d=>{
-    const before=LOCAL.months.length;LOCAL.months=mergeMonths(LOCAL.months,(d.months||[]).map(m=>({...m,_t:m._t||0})));saveLocal();showData();
-    toast(`Imported ${LOCAL.months.length-before} month${LOCAL.months.length-before===1?"":"s"} from the old data file ✓`);if(G.on)sync(false);
-  }).catch(e=>toast("Couldn't import the old data file ("+(e.message||e)+")"));
-}
-importOld();addEventListener("hashchange",importOld);
 </script>
 <script src="portal.js" defer></script>
 </body>
