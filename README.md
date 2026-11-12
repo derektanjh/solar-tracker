@@ -9,7 +9,7 @@ Live site: https://derektanjh.github.io/solar-tracker/
 - **Without signing in,** bills are kept only in that browser on that device.
 - **Backup file:** save or restore a `.json` backup from the **Your data** panel.
 - **Add a month:** tap **Add month**, upload the TNB bill PDF (read on your device) and type the solar kWh from your solar app.
-- **Bills supported:** TNB **Domestic Time-of-Use** bills.
+- **Bills supported:** TNB domestic bills on **Time-of-Use** or the **standard tariff**, with **NEM** or **Solar ATAP**. Time-of-Use maths is checked to the sen against real bills; the standard tariff uses TNB's published July 2025 rates and hasn't been checked against a real standard bill yet. Reading standard and ATAP bill PDFs is best effort, so the numbers can be typed in.
 - **Actual usage** = Import + Solar generated − Export.
 - iPhone: open the site in Safari → Share → **Add to Home Screen**.
 
