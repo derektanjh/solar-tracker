@@ -242,7 +242,7 @@ footer a{color:var(--muted)}
     </div>
   </details>
 </main>
-<footer><span id="ftData">Data: on this device, synced to your Google Drive if you sign in</span><span>·</span><a href="#calc" id="ftCalc">How it's calculated</a><span>·</span><span>Home Solar v2</span></footer>
+<footer><span id="ftData">Data: your Google account (or only this browser if not signed in)</span><span>·</span><a href="#calc" id="ftCalc">How it's calculated</a><span>·</span><span>Home Solar v2</span></footer>
 
 <button class="btn fab" id="fab" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add month</button>
 
@@ -296,8 +296,8 @@ footer a{color:var(--muted)}
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dataT" style="max-width:560px">
     <button class="x" type="button" id="dataX" aria-label="Close">×</button>
     <h3 id="dataT">Your data</h3>
-    <div class="note">Your bills are saved on this device. Nobody else can see them, not even the person who made this website.</div>
-    <div class="step"><div class="lbl">Google Drive sync</div>
+    <div class="note" id="dataIntro"></div>
+    <div class="step"><div class="lbl">Your Google account</div>
       <div class="note" id="gState"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         <button class="btn" type="button" id="gIn">Sign in with Google</button>
@@ -313,7 +313,7 @@ footer a{color:var(--muted)}
         <label class="btn secondary" style="cursor:pointer">Restore from a file<input type="file" id="bkIn" accept="application/json,.json" hidden></label>
       </div>
     </div>
-    <div class="step"><div class="lbl">This device</div>
+    <div class="step"><div class="lbl">Copy on this device</div>
       <div class="note" id="devState"></div>
       <button class="btn link" type="button" id="wipe" style="color:var(--bad);margin-top:6px">Remove my bills from this device</button>
     </div>
@@ -571,8 +571,9 @@ function showData(){
 function welcome(){
   ROWS=[];
   $("hero").innerHTML=`<div class="h-main welcome"><div class="h-k">Welcome to Home Solar</div><div class="h-v" style="font-size:26px">See what your solar saves you</div>
-    <div class="h-d">Add your TNB bill each month and the solar kWh from your solar app. Works with TNB <b>Domestic Time-of-Use</b> bills. Your bills stay on this device, or in your own Google Drive if you sign in.</div>
-    <div class="acts"><button class="btn" type="button" id="wAdd">Add your first bill</button><button class="btn secondary" type="button" id="wSign">Sign in with Google</button><button class="btn secondary" type="button" id="wRestore">Restore a backup</button></div></div>`;
+    <div class="h-d">Add your TNB bill each month and the solar kWh from your solar app. Works with TNB <b>Domestic Time-of-Use</b> bills.<br><br><b>Sign in with Google</b> to keep your bills in your own Google account, so they show on your phone, laptop and any other device where you sign in.</div>
+    <div class="acts"><button class="btn" type="button" id="wSign">Sign in with Google</button><button class="btn secondary" type="button" id="wAdd">Try without signing in</button><button class="btn secondary" type="button" id="wRestore">Restore a backup</button></div>
+    <div class="note" style="margin-top:10px">Without signing in, your bills are kept only in this browser on this device.</div></div>`;
   $("tiles").innerHTML="";$("tbl").innerHTML="";$("mcards").innerHTML="";
   ["c1","c2","c3"].forEach(id=>$(id).innerHTML='<p class="note" style="padding:24px 0;text-align:center">Your charts appear after your first bill.</p>');
   $("saveNote").textContent="";$("limitNote").textContent="";
@@ -662,7 +663,7 @@ function signIn(){sync(true)}
 function signOut(){
   const t=G.token;G={};saveG();tokenClient=null;
   if(t&&window.google&&google.accounts&&google.accounts.oauth2)google.accounts.oauth2.revoke(t,()=>{});
-  syncUI();toast("Signed out. Your bills are still on this device, and the copy in your Google Drive stays there.");
+  syncUI();toast("Signed out. Your bills stay in your Google account; sign in again to sync.");
 }
 function syncUI(){
   const n=LOCAL.months.length,b=$("hdrData"),l=$("syncLbl");
@@ -671,12 +672,14 @@ function syncUI(){
   else if(G.on&&G.dirty){l.textContent="Tap to sync";b.classList.add("warn")}
   else if(G.on&&!tokenOk())l.textContent="Sync";
   else if(G.on){l.textContent="Synced";b.classList.add("ok")}
-  else l.textContent=n?"Back up":"Your data";
-  $("gState").innerHTML=G.on?`Signed in${G.email?" as <b>"+esc(G.email)+"</b>":""}. Your bills are kept in a file called <b>${GFILE}</b> in your Google Drive, so they appear on any phone or computer where you sign in.`+(G.last?` Last synced ${new Date(G.last).toLocaleString()}.`:"")+(G.dirty?' <span style="color:var(--warn)">Some changes aren\'t in Google Drive yet: tap Sync now.</span>':"")
-    :"Sign in to keep your bills in your own Google Drive and see them on all your devices. Home Solar can only see the one file it creates, nothing else in your Drive.";
+  else l.textContent="Sign in";
+  $("dataIntro").textContent=G.on?"Your bills are kept in your Google account. Nobody else can see them, not even the person who made this website."
+    :"You're not signed in, so your bills are kept only in this browser on this device. Nobody else can see them, not even the person who made this website.";
+  $("gState").innerHTML=G.on?`Signed in${G.email?" as <b>"+esc(G.email)+"</b>":""}. Your bills are kept in a file called <b>${GFILE}</b> in your Google Drive, so they show on any phone or computer where you sign in. When you come back after a while, tap <b>Sync</b> at the top to fetch changes from your other devices.`+(G.last?` Last synced ${new Date(G.last).toLocaleString()}.`:"")+(G.dirty?' <span style="color:var(--warn)">Some changes aren\'t in Google Drive yet: tap Sync now.</span>':"")
+    :"Sign in to keep your bills in your Google account and see them on your phone, laptop and other devices. Home Solar can only see the one file it creates in your Google Drive, nothing else.";
   $("gIn").style.display=G.on?"none":"";$("gSync").style.display=G.on?"":"none";$("gOut").style.display=G.on?"":"none";
   $("gSync").disabled=syncing;$("gIn").disabled=syncing;
-  $("devState").textContent=n?`${n} month${n>1?"s":""} of bills saved on this device.`:"No bills saved on this device yet.";
+  $("devState").textContent=(n?`${n} month${n>1?"s":""} of bills on this device`:"No bills on this device yet")+(G.on?", kept so the page opens instantly and works without signal.":".");
 }
 function esc(x){return String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 
@@ -721,7 +724,7 @@ function doSave(){
   if(!saveLocal())return;
   showData();closeSheet();
   if(G.on){G.dirty=true;saveG();toast(`${lblLong(entry.month)} saved ✓`+(tokenOk()?" Syncing to Google Drive…":""));sync(true)}
-  else toast(`${lblLong(entry.month)} saved on this device ✓ Tap "Back up" at the top to keep a copy in Google Drive.`);
+  else toast(`${lblLong(entry.month)} saved in this browser ✓ Tap "Sign in" at the top to keep your bills in your Google account.`);
 }
 $("saveBtn").onclick=doSave;
 
