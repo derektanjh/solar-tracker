@@ -713,7 +713,7 @@ function sync(fromTap){ // fromTap: may open the Google window
 }
 function signIn(){sync(true)}
 /* --- sharing one file between Google accounts (Google Picker grants access to a file someone shared) --- */
-const PICKER_KEY="",GAPP="183460416689"; // API key restricted to this site + Picker API; app id = Cloud project number
+const PICKER_KEY="AIzaSyDFy23pKUzSb-1e3S1iAfajP-naVlMuWjo",GAPP="183460416689"; // API key restricted to this site + Picker API; app id = Cloud project number
 let pickerP=null;
 function loadPicker(){return pickerP||(pickerP=new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://apis.google.com/js/api.js";sc.async=true;
   sc.onload=()=>gapi.load("picker",{callback:res,onerror:()=>{pickerP=null;rej(new Error("Couldn't load Google's file picker"))}});sc.onerror=()=>{pickerP=null;rej(new Error("Couldn't load Google's file picker. Check your connection."))};document.head.appendChild(sc)}))}
