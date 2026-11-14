@@ -37,6 +37,9 @@ header h1{flex:1}
 #hdrAdd,#hdrData{flex:none}
 #hdrData{padding:9px 12px;font-size:14px;gap:6px}#hdrData svg{width:18px;height:18px}#hdrData.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,var(--line))}#hdrData.ok svg{color:var(--good)}
 .welcome .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+/* Google file picker: always above the page and its panels, inside the screen on phones */
+.picker-dialog-bg{z-index:10000!important}
+.picker-dialog{z-index:10001!important;max-width:calc(100vw - 8px)!important;left:50%!important;transform:translateX(-50%)!important;top:max(8px,env(safe-area-inset-top))!important}
 h1{font-size:22px;line-height:1.2;margin:0}
 h2{font-size:17px;margin:0 0 4px}
 .sub{color:var(--text2);margin:6px 0 18px;font-size:14px}
@@ -737,9 +740,12 @@ function pickShared(){
   $("gErr").textContent="";
   if(!PICKER_KEY){$("gErr").textContent="Sharing isn't set up on this website yet.";return}
   (tokenOk()?Promise.resolve():getToken()).then(()=>loadPicker()).then(()=>{
+    closeData(); // the picker must sit on top of the page, not behind the Your data panel
     const view=new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes("application/json").setOwnedByMe(false).setQuery("Home Solar data");
     new google.picker.PickerBuilder().addView(view).setOAuthToken(G.token).setDeveloperKey(PICKER_KEY).setAppId(GAPP)
-      .setTitle("Choose the Home Solar file shared with you").setCallback(d=>{if(d.action===google.picker.Action.PICKED&&d.docs&&d.docs[0])useShared(d.docs[0].id)}).build().setVisible(true);
+      .setTitle("Choose the Home Solar file shared with you")
+      .setSize(Math.max(300,Math.min(1051,innerWidth-16)),Math.max(360,Math.min(650,innerHeight-90))) // fit phone screens
+      .setCallback(d=>{if(d.action===google.picker.Action.PICKED&&d.docs&&d.docs[0])useShared(d.docs[0].id);else if(d.action==="cancel")openData()}).build().setVisible(true);
   }).catch(e=>{$("gErr").textContent=e.message||String(e)});
 }
 async function useShared(id){
@@ -784,7 +790,7 @@ function syncUI(){
   $("gSync").disabled=syncing;$("gIn").disabled=syncing;
   $("shareBox").style.display=G.on?"":"none";
   $("shareState").innerHTML=G.shared?"Want your own separate bills instead? Stop using the shared file."
-    :"<b>Share with someone</b> (e.g. family): opens your file in Google Drive. Tap <b>Share</b> there and add their Gmail as an <b>Editor</b>. Then they tap <b>Use a file shared with me</b> here, once, on their own Google account.";
+    :"<b>Share with someone</b> (e.g. family): opens your file in Google Drive. Tap <b>Share</b> there and add their Gmail as an <b>Editor</b>. Then they tap <b>Use a file shared with me</b> here, once, on their own Google account. On iPhone, Google may first ask to <b>allow cookie access</b>: tap <b>Continue</b> / <b>Allow</b>.";
   $("shBtn").style.display=G.shared?"none":"";$("useBtn").style.display=G.shared?"none":"";$("stopBtn").style.display=G.shared?"":"none";
   $("devState").textContent=(n?`${n} month${n>1?"s":""} of bills on this device`:"No bills on this device yet")+(G.on?", kept so the page opens instantly and works without signal.":".");
 }
