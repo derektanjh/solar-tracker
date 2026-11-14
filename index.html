@@ -314,6 +314,14 @@ footer a{color:var(--muted)}
         <button class="btn" type="button" id="gSync">Sync now</button>
         <button class="btn secondary" type="button" id="gOut">Sign out</button>
       </div>
+      <div id="shareBox" style="display:none;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)">
+        <div class="note" id="shareState"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <button class="btn secondary" type="button" id="shBtn">Share with someone</button>
+          <button class="btn secondary" type="button" id="useBtn">Use a file shared with me</button>
+          <button class="btn secondary" type="button" id="stopBtn">Stop using the shared file</button>
+        </div>
+      </div>
       <div class="errmsg" id="gErr"></div>
     </div>
     <div class="step"><div class="lbl">Backup file</div>
@@ -649,10 +657,13 @@ async function gfetch(url,opt={}){
 }
 async function findFile(){
   if(G.fileId)return G.fileId;
+  // drive.file only lists files this app created, or that the person picked with "Use a file shared with me"
   const q=encodeURIComponent(`name='${GFILE}' and trashed=false`);
-  const r=await gfetch(`${GAPI}/files?q=${q}&spaces=drive&orderBy=modifiedTime desc&fields=files(id)`);
+  const r=await gfetch(`${GAPI}/files?q=${q}&spaces=drive&orderBy=modifiedTime desc&fields=files(id,ownedByMe,owners(emailAddress))`);
   if(!r.ok)throw new Error("Google Drive error "+r.status);
-  const j=await r.json();G.fileId=j.files&&j.files[0]?j.files[0].id:null;saveG();return G.fileId;
+  const fs=(await r.json()).files||[],shared=fs.find(f=>!f.ownedByMe),own=fs.find(f=>f.ownedByMe);
+  const f=G.mode==="own"?own:(shared||own);
+  G.fileId=f?f.id:null;G.shared=!!(f&&!f.ownedByMe);G.sharedBy=G.shared&&f.owners&&f.owners[0]?f.owners[0].emailAddress:null;saveG();return G.fileId;
 }
 async function readRemote(){
   for(let tries=0;tries<2;tries++){
@@ -701,6 +712,41 @@ function sync(fromTap){ // fromTap: may open the Google window
   }).finally(()=>{syncing=false;syncUI()});
 }
 function signIn(){sync(true)}
+/* --- sharing one file between Google accounts (Google Picker grants access to a file someone shared) --- */
+const PICKER_KEY="",GAPP="183460416689"; // API key restricted to this site + Picker API; app id = Cloud project number
+let pickerP=null;
+function loadPicker(){return pickerP||(pickerP=new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://apis.google.com/js/api.js";sc.async=true;
+  sc.onload=()=>gapi.load("picker",{callback:res,onerror:()=>{pickerP=null;rej(new Error("Couldn't load Google's file picker"))}});sc.onerror=()=>{pickerP=null;rej(new Error("Couldn't load Google's file picker. Check your connection."))};document.head.appendChild(sc)}))}
+function pickShared(){
+  $("gErr").textContent="";
+  if(!PICKER_KEY){$("gErr").textContent="Sharing isn't set up on this website yet.";return}
+  (tokenOk()?Promise.resolve():getToken()).then(()=>loadPicker()).then(()=>{
+    const view=new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes("application/json").setOwnedByMe(false).setQuery("Home Solar data");
+    new google.picker.PickerBuilder().addView(view).setOAuthToken(G.token).setDeveloperKey(PICKER_KEY).setAppId(GAPP)
+      .setTitle("Choose the Home Solar file shared with you").setCallback(d=>{if(d.action===google.picker.Action.PICKED&&d.docs&&d.docs[0])useShared(d.docs[0].id)}).build().setVisible(true);
+  }).catch(e=>{$("gErr").textContent=e.message||String(e)});
+}
+async function useShared(id){
+  try{
+    const m=await gfetch(`${GAPI}/files/${id}?fields=id,name,ownedByMe,owners(emailAddress)`);if(!m.ok)throw new Error("Google Drive error "+m.status);
+    const meta=await m.json(),r=await gfetch(`${GAPI}/files/${id}?alt=media`);if(!r.ok)throw new Error("Google Drive error "+r.status);
+    let d=null;try{d=JSON.parse(await r.text())}catch(e){}
+    if(!d||!Array.isArray(d.months))throw new Error("That isn't a Home Solar file. Pick the file called "+GFILE+" that was shared with you");
+    if(LOCAL.months.length&&!confirm(`Add the ${LOCAL.months.length} month${LOCAL.months.length>1?"s":""} on this device to the shared file?\n\nOK = add them. Cancel = show only the shared file's months here (yours stay in your own file).`))LOCAL.months=[];
+    G.fileId=id;G.mode=meta.ownedByMe?"own":"shared";G.shared=!meta.ownedByMe;G.sharedBy=meta.owners&&meta.owners[0]?meta.owners[0].emailAddress:null;saveG();saveLocal();
+    await sync(true);toast(G.shared?`Now using the file shared by ${G.sharedBy||"someone"} ✓`:"Using your own file ✓");
+  }catch(e){$("gErr").textContent=e.message||String(e)}
+}
+function shareFile(){
+  $("gErr").textContent="";
+  if(!G.fileId){$("gErr").textContent="Sync once first, so your file exists in Google Drive.";return}
+  window.open(`https://drive.google.com/file/d/${G.fileId}/view`,"_blank","noopener");
+}
+function stopShared(){
+  if(!confirm("Switch this device back to your own Home Solar file? The shared file stays as it is."))return;
+  G.mode="own";G.fileId=null;G.shared=false;G.sharedBy=null;saveG();LOCAL.months=[];saveLocal();showData();sync(true);
+}
+$("shBtn").onclick=shareFile;$("useBtn").onclick=pickShared;$("stopBtn").onclick=stopShared;
 function signOut(){
   const t=G.token;G={};saveG();tokenClient=null;
   if(t&&window.google&&google.accounts&&google.accounts.oauth2)google.accounts.oauth2.revoke(t,()=>{});
@@ -716,10 +762,14 @@ function syncUI(){
   else l.textContent="Sign in";
   $("dataIntro").textContent=G.on?"Your bills are kept in your Google account. Nobody else can see them, not even the person who made this website."
     :"You're not signed in, so your bills are kept only in this browser on this device. Nobody else can see them, not even the person who made this website.";
-  $("gState").innerHTML=G.on?`Signed in${G.email?" as <b>"+esc(G.email)+"</b>":""}. Your bills are kept in a file called <b>${GFILE}</b> in your Google Drive, so they show on any phone or computer where you sign in. When you come back after a while, tap <b>Sync</b> at the top to fetch changes from your other devices.`+(G.last?` Last synced ${new Date(G.last).toLocaleString()}.`:"")+(G.dirty?' <span style="color:var(--warn)">Some changes aren\'t in Google Drive yet: tap Sync now.</span>':"")
+  $("gState").innerHTML=G.on?`Signed in${G.email?" as <b>"+esc(G.email)+"</b>":""}. `+(G.shared?`You're using the <b>${GFILE}</b> file shared by <b>${esc(G.sharedBy||"someone")}</b>, so you both see and edit the same bills.`:`Your bills are kept in a file called <b>${GFILE}</b> in your Google Drive, so they show on any phone or computer where you sign in.`)+` When you come back after a while, tap <b>Sync</b> at the top to fetch changes from your other devices.`+(G.last?` Last synced ${new Date(G.last).toLocaleString()}.`:"")+(G.dirty?' <span style="color:var(--warn)">Some changes aren\'t in Google Drive yet: tap Sync now.</span>':"")
     :"Sign in to keep your bills in your Google account and see them on your phone, laptop and other devices. Home Solar can only see the one file it creates in your Google Drive, nothing else.";
   $("gIn").style.display=G.on?"none":"";$("gSync").style.display=G.on?"":"none";$("gOut").style.display=G.on?"":"none";
   $("gSync").disabled=syncing;$("gIn").disabled=syncing;
+  $("shareBox").style.display=G.on?"":"none";
+  $("shareState").innerHTML=G.shared?"Want your own separate bills instead? Stop using the shared file."
+    :"<b>Share with someone</b> (e.g. family): opens your file in Google Drive. Tap <b>Share</b> there and add their Gmail as an <b>Editor</b>. Then they tap <b>Use a file shared with me</b> here, once, on their own Google account.";
+  $("shBtn").style.display=G.shared?"none":"";$("useBtn").style.display=G.shared?"none":"";$("stopBtn").style.display=G.shared?"":"none";
   $("devState").textContent=(n?`${n} month${n>1?"s":""} of bills on this device`:"No bills on this device yet")+(G.on?", kept so the page opens instantly and works without signal.":".");
 }
 function esc(x){return String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
