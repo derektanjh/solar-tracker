@@ -802,7 +802,10 @@ let wT;$("wipe").onclick=()=>{const b=$("wipe");
 /* --- data sheet --- */
 function openData(){syncUI();$("gErr").textContent="";$("ovData").classList.add("open");$("ovData").setAttribute("aria-hidden","false");document.body.style.overflow="hidden";loadGis().catch(()=>{})}
 function closeData(){$("ovData").classList.remove("open");$("ovData").setAttribute("aria-hidden","true");document.body.style.overflow=""}
-$("hdrData").onclick=()=>{if(G.on&&(G.dirty||!tokenOk())&&!syncing){sync(true);return}openData()};
+$("hdrData").onclick=()=>{ // always open Your data; also sync if it's due (started first, while the tap still counts)
+  if(G.on&&(G.dirty||!tokenOk())&&!syncing)sync(true);
+  openData();
+};
 $("dataX").onclick=closeData;$("ovData").addEventListener("click",e=>{if(e.target.id==="ovData")closeData()});
 addEventListener("keydown",e=>{if(e.key==="Escape")closeData()});
 $("gIn").onclick=signIn;$("gSync").onclick=()=>sync(true);$("gOut").onclick=signOut;
