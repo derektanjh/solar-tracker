@@ -655,12 +655,27 @@ async function gfetch(url,opt={}){
   if(r.status===401){G.token=null;saveG();const e=new Error("Your Google sign-in has expired");e.auth=true;throw e}
   return r;
 }
+// turn Google's error reason into plain words (Google sends e.g. 403 + "storageQuotaExceeded")
+async function driveErr(r){
+  let reason="",msg="";try{const j=await r.json();const e=j.error||{};reason=(e.errors&&e.errors[0]&&e.errors[0].reason)||e.status||"";msg=e.message||""}catch(x){}
+  const T={
+    storageQuotaExceeded:"Your Google storage is full, so Home Solar can't save its file in your Google Drive. Free up some space (Gmail, Photos or Drive), then tap Sync now",
+    quotaExceeded:"Your Google storage is full, so Home Solar can't save its file in your Google Drive. Free up some space (Gmail, Photos or Drive), then tap Sync now",
+    insufficientFilePermissions:"You can only view the shared Home Solar file, not change it. Ask the person who shared it to make you an Editor in Google Drive",
+    appNotAuthorizedToFile:"Home Solar doesn't have access to that file any more. Tap \"Use a file shared with me\" and pick it again",
+    insufficientPermissions:"Google didn't give Home Solar access to Google Drive. Tap Sign out, then sign in again and allow access to its own files in Google Drive",
+    domainPolicy:"Your Google account doesn't allow apps to use Google Drive (common for work, school or Family Link accounts). Try a personal Gmail account",
+    accessNotConfigured:"Google Drive isn't switched on for this website yet. Please tell the person who shared Home Solar",
+    userRateLimitExceeded:"Google is busy right now. Wait a minute and tap Sync now",rateLimitExceeded:"Google is busy right now. Wait a minute and tap Sync now",
+    dailyLimitExceeded:"Google's daily limit for this website was reached. Please try again tomorrow"};
+  const e=new Error(T[reason]||`Google Drive error ${r.status}${reason?" ("+reason+")":""}${msg&&!T[reason]?": "+msg:""}`);e.status=r.status;e.reason=reason;return e;
+}
 async function findFile(){
   if(G.fileId)return G.fileId;
   // drive.file only lists files this app created, or that the person picked with "Use a file shared with me"
   const q=encodeURIComponent(`name='${GFILE}' and trashed=false`);
   const r=await gfetch(`${GAPI}/files?q=${q}&spaces=drive&orderBy=modifiedTime desc&fields=files(id,ownedByMe,owners(emailAddress))`);
-  if(!r.ok)throw new Error("Google Drive error "+r.status);
+  if(!r.ok)throw await driveErr(r);
   const fs=(await r.json()).files||[],shared=fs.find(f=>!f.ownedByMe),own=fs.find(f=>f.ownedByMe);
   const f=G.mode==="own"?own:(shared||own);
   G.fileId=f?f.id:null;G.shared=!!(f&&!f.ownedByMe);G.sharedBy=G.shared&&f.owners&&f.owners[0]?f.owners[0].emailAddress:null;saveG();return G.fileId;
@@ -670,7 +685,7 @@ async function readRemote(){
     const id=await findFile();if(!id)return null;
     const r=await gfetch(`${GAPI}/files/${id}?alt=media`);
     if(r.status===404){G.fileId=null;saveG();continue} // file was deleted: look again
-    if(!r.ok)throw new Error("Google Drive error "+r.status);
+    if(!r.ok)throw await driveErr(r);
     try{return JSON.parse(await r.text())}catch(e){return {months:[]}}
   }
   return null;
@@ -679,13 +694,13 @@ async function writeRemote(obj){
   const body=JSON.stringify(obj,null,1);
   if(G.fileId){
     const r=await gfetch(`${GUP}/files/${G.fileId}?uploadType=media&fields=id`,{method:"PATCH",headers:{"Content-Type":"application/json"},body});
-    if(r.ok)return;if(r.status!==404)throw new Error("Google Drive error "+r.status);
+    if(r.ok)return;if(r.status!==404)throw await driveErr(r);
     G.fileId=null;
   }
   const b="homesolar"+Date.now(),meta={name:GFILE,mimeType:"application/json",description:"Your Home Solar tracker data (bills and solar figures). Made by the Home Solar website."};
   const r=await gfetch(`${GUP}/files?uploadType=multipart&fields=id`,{method:"POST",headers:{"Content-Type":"multipart/related; boundary="+b},
     body:`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${b}--`});
-  if(!r.ok)throw new Error("Google Drive error "+r.status);
+  if(!r.ok)throw await driveErr(r);
   G.fileId=(await r.json()).id;saveG();
 }
 let syncing=false;
@@ -701,7 +716,8 @@ function sync(fromTap){ // fromTap: may open the Google window
     const remote=await readRemote(),rm=remote&&Array.isArray(remote.months)?remote.months:[];
     const merged=mergeMonths(LOCAL.months,rm);
     const plan=LOCAL.plan||(remote&&remote.plan)||null;
-    if(!remote||JSON.stringify(rm)!==JSON.stringify(merged)||JSON.stringify(remote.plan||null)!==JSON.stringify(plan))await writeRemote({app:"home-solar",version:1,updated:new Date().toISOString(),plan,months:merged});
+    // no file yet and nothing to save (e.g. family who'll use a shared file): don't create an empty one
+    if((remote||merged.length)&&(!remote||JSON.stringify(rm)!==JSON.stringify(merged)||JSON.stringify(remote.plan||null)!==JSON.stringify(plan)))await writeRemote({app:"home-solar",version:1,updated:new Date().toISOString(),plan,months:merged});
     if(plan)LOCAL.plan=plan;
     const added=merged.length-LOCAL.months.length;
     LOCAL.months=merged;saveLocal();G.dirty=false;G.last=Date.now();saveG();showData();
@@ -728,8 +744,8 @@ function pickShared(){
 }
 async function useShared(id){
   try{
-    const m=await gfetch(`${GAPI}/files/${id}?fields=id,name,ownedByMe,owners(emailAddress)`);if(!m.ok)throw new Error("Google Drive error "+m.status);
-    const meta=await m.json(),r=await gfetch(`${GAPI}/files/${id}?alt=media`);if(!r.ok)throw new Error("Google Drive error "+r.status);
+    const m=await gfetch(`${GAPI}/files/${id}?fields=id,name,ownedByMe,owners(emailAddress)`);if(!m.ok)throw await driveErr(m);
+    const meta=await m.json(),r=await gfetch(`${GAPI}/files/${id}?alt=media`);if(!r.ok)throw await driveErr(r);
     let d=null;try{d=JSON.parse(await r.text())}catch(e){}
     if(!d||!Array.isArray(d.months))throw new Error("That isn't a Home Solar file. Pick the file called "+GFILE+" that was shared with you");
     if(LOCAL.months.length&&!confirm(`Add the ${LOCAL.months.length} month${LOCAL.months.length>1?"s":""} on this device to the shared file?\n\nOK = add them. Cancel = show only the shared file's months here (yours stay in your own file).`))LOCAL.months=[];
