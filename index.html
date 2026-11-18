@@ -37,14 +37,20 @@ header h1{flex:1}
 #hdrAdd,#hdrData{flex:none}
 #hdrData{padding:9px 12px;font-size:14px;gap:6px}#hdrData svg{width:18px;height:18px}#hdrData.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,var(--line))}#hdrData.ok svg{color:var(--good)}
 .welcome .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-/* 800 kWh check */
-.qgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.qgrid label.f{min-width:0}
+/* 800 kWh check: floating button + panel */
+.qfab{position:fixed;left:calc(18px + env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));z-index:25;display:inline-flex;align-items:center;gap:7px;
+  padding:12px 16px;border-radius:999px;border:1px solid color-mix(in srgb,var(--c,var(--grid-c)) 45%,var(--line));background:var(--card);color:var(--c,var(--text));
+  font:inherit;font-weight:700;font-size:15px;box-shadow:0 8px 24px rgba(0,0,0,.18);cursor:pointer;font-variant-numeric:tabular-nums}
+.qfab svg{width:20px;height:20px;color:var(--c,var(--grid-c))}
+.qfab:active{transform:scale(.97)}
+.qgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.qgrid label:nth-child(5){grid-column:1/-1}
+body{padding-bottom:calc(76px + env(safe-area-inset-bottom))} /* room for the floating buttons */.qgrid label.f{min-width:0}
 .qin{font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);width:100%;min-height:44px;min-width:0;max-width:100%;display:block;-webkit-appearance:none;appearance:none}.qin[type=date]{text-align:left}.qin[type=date]::-webkit-date-and-time-value{text-align:left}
 .qin:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .qres{margin-top:14px;display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:10px}.qres .v small{font-size:13px;font-weight:600;color:var(--text2);margin-left:2px}
 .qres>div{background:var(--soft);border-radius:12px;padding:10px 12px}
 .qres .k{font-size:12px;color:var(--text2);font-weight:600}.qres .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}.qres .d{font-size:12px;color:var(--muted)}
-.qres .hero{background:color-mix(in srgb,var(--c) 12%,var(--card));border:1px solid color-mix(in srgb,var(--c) 45%,var(--line))}.qres .hero .v{color:var(--c);font-size:28px}
+.qres .hero{display:block;background:color-mix(in srgb,var(--c) 12%,var(--card));border:1px solid color-mix(in srgb,var(--c) 45%,var(--line))}.qres .hero .v{color:var(--c);font-size:28px}
 .qbar{position:relative;height:14px;border-radius:99px;background:var(--soft);margin:14px 0 4px;overflow:visible}
 .qbar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--grid-c)}
 .qbar b{position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:2px;background:var(--c)}
@@ -217,17 +223,6 @@ footer a{color:var(--muted)}
   <div class="hero" id="hero"><div class="h-main"><div class="h-k">Loading your bills…</div><div class="h-v skel">RM000.00</div></div></div>
   <div class="tiles" id="tiles"></div>
 
-  <div class="card" id="quota">
-    <div class="card-h"><div><h2 id="qTitle">This month's 800 kWh check</h2><div class="note">Key in your import from the myTNB app so far. See how much you can still use each day and stay under the limit.</div></div></div>
-    <div class="qgrid">
-      <label class="f">Billing cycle starts<input class="qin" id="qStart" type="date"></label>
-      <label class="f">Billing cycle ends<input class="qin" id="qEnd" type="date"></label>
-      <label class="f">Import from TNB so far (kWh)<input class="qin" id="qUsed" inputmode="decimal" placeholder="e.g. 412"><small>From the myTNB app, since the cycle started</small></label>
-      <label class="f">Up to and including<input class="qin" id="qAsOf" type="date"><small>The last day that reading covers</small></label>
-      <label class="f">Limit (kWh)<input class="qin" id="qLimit" inputmode="decimal"><small id="qLimitHint"></small></label>
-    </div>
-    <div id="qOut"></div>
-  </div>
 
   <div class="card">
     <div class="card-h"><h2>Trends</h2>
@@ -274,6 +269,21 @@ footer a{color:var(--muted)}
 </main>
 <footer><span id="ftData">Data: your Google account (or only this browser if not signed in)</span><span>·</span><a href="#calc" id="ftCalc">How it's calculated</a><span>·</span><a href="privacy.html">Privacy</a><span>·</span><span>Home Solar v2</span></footer>
 
+<button class="qfab" id="qFab" type="button" aria-label="Monthly import-limit check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/></svg><span id="qFabLbl">800 kWh</span></button>
+<div class="overlay" id="ovQuota" aria-hidden="true">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="qTitle" id="quota" style="max-width:720px;width:min(720px,100%)">
+    <button class="x" type="button" id="qX" aria-label="Close">×</button>
+    <div><h3 id="qTitle" style="padding-right:44px">This month's 800 kWh check</h3><div class="note">Key in your import from the myTNB app so far. See how much you can still use each day and stay under the limit.</div></div>
+    <div class="qgrid">
+      <label class="f">Billing cycle starts<input class="qin" id="qStart" type="date"></label>
+      <label class="f">Billing cycle ends<input class="qin" id="qEnd" type="date"></label>
+      <label class="f">Import from TNB so far (kWh)<input class="qin" id="qUsed" inputmode="decimal" placeholder="e.g. 412"><small>From the myTNB app, since the cycle started</small></label>
+      <label class="f">Up to and including<input class="qin" id="qAsOf" type="date"><small>The last day that reading covers</small></label>
+      <label class="f">Limit (kWh)<input class="qin" id="qLimit" inputmode="decimal"><small id="qLimitHint"></small></label>
+    </div>
+    <div id="qOut"></div>
+  </div>
+</div>
 <button class="btn fab" id="fab" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add month</button>
 
 <div class="overlay" id="ov" aria-hidden="true">
@@ -896,10 +906,12 @@ function qRender(){
   $("qLimitHint").textContent=rule?`TNB rule until ${lbl(rule.to)}: ${rule.import_limit} kWh or less = no retail charge, AFA or service tax`:"Above 600 kWh, the retail charge, AFA and service tax apply";
   if(!s||!e||e<s){out.innerHTML='<div class="qmsg" style="--c:var(--warn)">Check the billing cycle dates. The end must be after the start.</div>';return}
   const used=parseFloat(String($("qUsed").value).replace(/,/g,""));
+  const fab=$("qFab"),fl=$("qFabLbl");fab.style.removeProperty("--c");fl.textContent=`${f0(limit)} kWh`;
   if(!isFinite(used)){out.innerHTML='<p class="note" style="margin-top:12px">Key in your import so far to see your daily budget.</p>';return}
   const total=Math.round((e-s)/DAY)+1,asOf=a&&a>=s&&a<=e?a:(a&&a>e?e:s);
   const done=Math.round((asOf-s)/DAY)+1,left=Math.round((e-asOf)/DAY),remain=limit-used,pace=used/done,proj=pace*total,perDay=left>0?remain/left:0;
   const over=remain<0,onTrack=proj<=limit,c=over?"var(--bad)":onTrack?"var(--good)":"var(--warn)";
+  fab.style.setProperty("--c",c);fl.textContent=over?`Over by ${f0(-remain)} kWh`:left===0?`${f0(remain)} kWh left`:`${f0(perDay)} kWh/day`;
   const head=over?`<div class="hero" style="--c:${c}"><div class="k">Already over the limit</div><div class="v">${f0(-remain)} kWh</div><div class="d">over ${f0(limit)} kWh, ${left} day${left===1?"":"s"} still to go</div></div>`
     :left===0?`<div class="hero" style="--c:${c}"><div class="k">Last day of the cycle</div><div class="v">${f0(remain)} kWh</div><div class="d">left before ${f0(limit)} kWh</div></div>`
     :`<div class="hero" style="--c:${c}"><div class="k">You can use per day</div><div class="v">${f1(perDay)}<small> kWh</small></div><div class="d">for the next ${left} day${left===1?"":"s"} to stay under ${f0(limit)}</div></div>`;
@@ -919,6 +931,11 @@ function fdt(d){return d.getDate()+" "+MON[d.getMonth()]}
   if(k==="start"&&Q.start&&(!Q.end||Q.end<=Q.start)){const d=dParse(addMonth(Q.start));d.setDate(d.getDate()-1);Q.end=dIso(d);$("qEnd").value=Q.end} // guess a one-month cycle
   qSave();qRender()}));
 if(Q.limitSet&&Q.limit)$("qLimit").value=Q.limit;
+function openQuota(){$("ovQuota").classList.add("open");$("ovQuota").setAttribute("aria-hidden","false");document.body.style.overflow="hidden";qRender()}
+function closeQuota(){$("ovQuota").classList.remove("open");$("ovQuota").setAttribute("aria-hidden","true");document.body.style.overflow=""}
+$("qFab").onclick=openQuota;$("qX").onclick=closeQuota;
+$("ovQuota").addEventListener("click",e=>{if(e.target.id==="ovQuota")closeQuota()});
+addEventListener("keydown",e=>{if(e.key==="Escape")closeQuota()});
 qRender();
 
 /* --- start --- */
