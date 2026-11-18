@@ -37,6 +37,20 @@ header h1{flex:1}
 #hdrAdd,#hdrData{flex:none}
 #hdrData{padding:9px 12px;font-size:14px;gap:6px}#hdrData svg{width:18px;height:18px}#hdrData.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,var(--line))}#hdrData.ok svg{color:var(--good)}
 .welcome .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+/* 800 kWh check */
+.qgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.qgrid label.f{min-width:0}
+.qin{font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);width:100%;min-height:44px;min-width:0;max-width:100%;display:block;-webkit-appearance:none;appearance:none}.qin[type=date]{text-align:left}.qin[type=date]::-webkit-date-and-time-value{text-align:left}
+.qin:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.qres{margin-top:14px;display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:10px}.qres .v small{font-size:13px;font-weight:600;color:var(--text2);margin-left:2px}
+.qres>div{background:var(--soft);border-radius:12px;padding:10px 12px}
+.qres .k{font-size:12px;color:var(--text2);font-weight:600}.qres .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}.qres .d{font-size:12px;color:var(--muted)}
+.qres .hero{background:color-mix(in srgb,var(--c) 12%,var(--card));border:1px solid color-mix(in srgb,var(--c) 45%,var(--line))}.qres .hero .v{color:var(--c);font-size:28px}
+.qbar{position:relative;height:14px;border-radius:99px;background:var(--soft);margin:14px 0 4px;overflow:visible}
+.qbar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--grid-c)}
+.qbar b{position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:2px;background:var(--c)}
+.qlegend{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.qmsg{margin-top:10px;padding:10px 12px;border-radius:10px;border-left:4px solid var(--c);background:color-mix(in srgb,var(--c) 8%,var(--card));font-size:14px}
+@media (max-width:900px){.qgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.qgrid label:nth-child(5){grid-column:1/-1}.qres{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.qres .hero{grid-column:1/-1}.qres>div{padding:9px 10px}.qres .v{font-size:19px}}
 /* Google file picker: always above the page and its panels, inside the screen on phones */
 .picker-dialog-bg{z-index:10000!important}
 .picker-dialog{z-index:10001!important;max-width:calc(100vw - 8px)!important;left:50%!important;transform:translateX(-50%)!important;top:max(8px,env(safe-area-inset-top))!important}
@@ -202,6 +216,18 @@ footer a{color:var(--muted)}
 <main>
   <div class="hero" id="hero"><div class="h-main"><div class="h-k">Loading your bills…</div><div class="h-v skel">RM000.00</div></div></div>
   <div class="tiles" id="tiles"></div>
+
+  <div class="card" id="quota">
+    <div class="card-h"><div><h2 id="qTitle">This month's 800 kWh check</h2><div class="note">Key in your import from the myTNB app so far. See how much you can still use each day and stay under the limit.</div></div></div>
+    <div class="qgrid">
+      <label class="f">Billing cycle starts<input class="qin" id="qStart" type="date"></label>
+      <label class="f">Billing cycle ends<input class="qin" id="qEnd" type="date"></label>
+      <label class="f">Import from TNB so far (kWh)<input class="qin" id="qUsed" inputmode="decimal" placeholder="e.g. 412"><small>From the myTNB app, since the cycle started</small></label>
+      <label class="f">Up to and including<input class="qin" id="qAsOf" type="date"><small>The last day that reading covers</small></label>
+      <label class="f">Limit (kWh)<input class="qin" id="qLimit" inputmode="decimal"><small id="qLimitHint"></small></label>
+    </div>
+    <div id="qOut"></div>
+  </div>
 
   <div class="card">
     <div class="card-h"><h2>Trends</h2>
@@ -844,6 +870,56 @@ function doSave(){
   else toast(`${lblLong(entry.month)} saved in this browser ✓ Tap "Sign in" at the top to keep your bills in your Google account.`);
 }
 $("saveBtn").onclick=doSave;
+
+/* --- this month's import-limit check (saved on this device only) --- */
+const QKEY="homeSolarQuota",DAY=86400000;
+function dIso(d){return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)}
+function dParse(x){const[y,m,d]=String(x||"").split("-").map(Number);return y?new Date(y,m-1,d):null}
+function addMonth(x){const d=dParse(x);return dIso(new Date(d.getFullYear(),d.getMonth()+1,d.getDate()))}
+function qMonth(start,end){return start.getDate()<=15?dIso(start).slice(0,7):dIso(end).slice(0,7)} // same rule the bill reader uses
+function qLoad(){
+  const q=readJSON(QKEY)||{},today=dIso(new Date());
+  if(!q.start){const t=new Date();q.start=dIso(new Date(t.getFullYear(),t.getMonth(),1));q.end=dIso(new Date(t.getFullYear(),t.getMonth()+1,0))}
+  while(q.end<today){q.start=addMonth(q.start);q.end=addMonth(q.end);q.used="";q.limitSet=false} // roll to the next cycle
+  if(!q.asOf||q.asOf<q.start||q.asOf>q.end)q.asOf=today<q.end?today:q.end;
+  $("qStart").value=q.start;$("qEnd").value=q.end;$("qUsed").value=q.used??"";$("qAsOf").value=q.asOf;
+  return q;
+}
+let Q=qLoad();
+function qSave(){try{localStorage.setItem(QKEY,JSON.stringify(Q))}catch(e){}}
+function qRender(){
+  const s=dParse(Q.start),e=dParse(Q.end),a=dParse(Q.asOf),out=$("qOut");
+  const rule=s&&e?ruleFor(qMonth(s,e),RULES):null,defLimit=rule?rule.import_limit:600;
+  if(!Q.limitSet)$("qLimit").value=defLimit;
+  const limit=parseFloat($("qLimit").value)||defLimit;
+  $("qTitle").textContent=`This month's ${f0(limit)} kWh check`;
+  $("qLimitHint").textContent=rule?`TNB rule until ${lbl(rule.to)}: ${rule.import_limit} kWh or less = no retail charge, AFA or service tax`:"Above 600 kWh, the retail charge, AFA and service tax apply";
+  if(!s||!e||e<s){out.innerHTML='<div class="qmsg" style="--c:var(--warn)">Check the billing cycle dates. The end must be after the start.</div>';return}
+  const used=parseFloat(String($("qUsed").value).replace(/,/g,""));
+  if(!isFinite(used)){out.innerHTML='<p class="note" style="margin-top:12px">Key in your import so far to see your daily budget.</p>';return}
+  const total=Math.round((e-s)/DAY)+1,asOf=a&&a>=s&&a<=e?a:(a&&a>e?e:s);
+  const done=Math.round((asOf-s)/DAY)+1,left=Math.round((e-asOf)/DAY),remain=limit-used,pace=used/done,proj=pace*total,perDay=left>0?remain/left:0;
+  const over=remain<0,onTrack=proj<=limit,c=over?"var(--bad)":onTrack?"var(--good)":"var(--warn)";
+  const head=over?`<div class="hero" style="--c:${c}"><div class="k">Already over the limit</div><div class="v">${f0(-remain)} kWh</div><div class="d">over ${f0(limit)} kWh, ${left} day${left===1?"":"s"} still to go</div></div>`
+    :left===0?`<div class="hero" style="--c:${c}"><div class="k">Last day of the cycle</div><div class="v">${f0(remain)} kWh</div><div class="d">left before ${f0(limit)} kWh</div></div>`
+    :`<div class="hero" style="--c:${c}"><div class="k">You can use per day</div><div class="v">${f1(perDay)}<small> kWh</small></div><div class="d">for the next ${left} day${left===1?"":"s"} to stay under ${f0(limit)}</div></div>`;
+  out.innerHTML=`<div class="qres">${head}
+    <div><div class="k">Days left</div><div class="v">${left}</div><div class="d">Cycle ends ${fdt(e)} · day ${done} of ${total}</div></div>
+    <div><div class="k">kWh left</div><div class="v">${over?"0":f0(remain)}</div><div class="d">${f0(used)} of ${f0(limit)} used</div></div>
+    <div><div class="k">Your pace</div><div class="v">${f1(pace)}<small> kWh/day</small></div><div class="d">About ${f0(proj)} kWh by cycle end</div></div></div>
+    <div class="qbar" style="--c:${c}" title="Bar: used so far · line: where your current pace ends"><i style="width:${Math.min(100,used/limit*100)}%"></i><b style="left:calc(${Math.min(100,proj/limit*100)}% - 1px)"></b></div>
+    <div class="qlegend"><span>0</span><span>Bar: used so far · line: pace at cycle end</span><span>${f0(limit)} kWh</span></div>
+    <div class="qmsg" style="--c:${c}">${over?`You've passed ${f0(limit)} kWh, so this bill will include the retail charge, AFA and service tax on the import above the threshold.`
+      :onTrack?`<b>On track.</b> At your current pace you'll import about <b>${f0(proj)} kWh</b>, ${f0(limit-proj)} kWh under the limit.`
+      :`<b>Slow down a little.</b> At your current pace you'd import about <b>${f0(proj)} kWh</b>, ${f0(proj-limit)} kWh over. Keep to <b>${f1(perDay)} kWh a day</b> (you're averaging ${f1(pace)}).`}</div>`;
+}
+function fdt(d){return d.getDate()+" "+MON[d.getMonth()]}
+[["qStart","start"],["qEnd","end"],["qUsed","used"],["qAsOf","asOf"],["qLimit","limit"]].forEach(([id,k])=>$(id).addEventListener("input",()=>{
+  Q[k]=$(id).value;if(k==="limit")Q.limitSet=$(id).value!=="";
+  if(k==="start"&&Q.start&&(!Q.end||Q.end<=Q.start)){const d=dParse(addMonth(Q.start));d.setDate(d.getDate()-1);Q.end=dIso(d);$("qEnd").value=Q.end} // guess a one-month cycle
+  qSave();qRender()}));
+if(Q.limitSet&&Q.limit)$("qLimit").value=Q.limit;
+qRender();
 
 /* --- start --- */
 showData();
